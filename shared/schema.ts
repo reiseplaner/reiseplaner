@@ -1,0 +1,178 @@
+import {
+  pgTable,
+  text,
+  varchar,
+  timestamp,
+  jsonb,
+  index,
+  serial,
+  integer,
+  boolean,
+  numeric,
+  date,
+} from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
+import { createInsertSchema } from "drizzle-zod";
+import { z } from "zod";
+
+// Session storage table (mandatory for Replit Auth)
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
+// User storage table (mandatory for Replit Auth)
+export const users = pgTable("users", {
+  id: varchar("id").primaryKey().notNull(),
+  email: varchar("email").unique(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  profileImageUrl: varchar("profile_image_url"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Trips table
+export const trips = pgTable("trips", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  name: varchar("name").notNull(),
+  departure: varchar("departure"), // IATA code
+  destination: varchar("destination"), // IATA code
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  travelers: integer("travelers").default(1),
+  totalBudget: numeric("total_budget", { precision: 10, scale: 2 }),
+  isPublic: boolean("is_public").default(false),
+  publicSlug: varchar("public_slug").unique(),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Budget items table
+export const budgetItems = pgTable("budget_items", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  category: varchar("category").notNull(), // Transport, Unterkunft, Verpflegung, etc.
+  subcategory: varchar("subcategory"),
+  quantity: integer("quantity").default(1),
+  unitPrice: numeric("unit_price", { precision: 10, scale: 2 }),
+  totalPrice: numeric("total_price", { precision: 10, scale: 2 }),
+  comment: text("comment"),
+  affiliateLink: text("affiliate_link"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Activities table
+export const activities = pgTable("activities", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  title: varchar("title").notNull(),
+  location: text("location"),
+  date: date("date"),
+  time: varchar("time"), // Format: "14:30"
+  price: numeric("price", { precision: 10, scale: 2 }),
+  comment: text("comment"),
+  bookingLink: text("booking_link"),
+  status: varchar("status").default("geplant"), // geplant, gebucht
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Restaurants table
+export const restaurants = pgTable("restaurants", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  name: varchar("name").notNull(),
+  address: text("address"),
+  date: date("date"),
+  time: varchar("time"), // Format: "19:00"
+  cuisine: varchar("cuisine"),
+  priceRange: varchar("price_range"), // €, €€, €€€
+  reservationLink: text("reservation_link"),
+  status: varchar("status").default("geplant"), // geplant, reserviert
+  comment: text("comment"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  trips: many(trips),
+}));
+
+export const tripsRelations = relations(trips, ({ one, many }) => ({
+  user: one(users, {
+    fields: [trips.userId],
+    references: [users.id],
+  }),
+  budgetItems: many(budgetItems),
+  activities: many(activities),
+  restaurants: many(restaurants),
+}));
+
+export const budgetItemsRelations = relations(budgetItems, ({ one }) => ({
+  trip: one(trips, {
+    fields: [budgetItems.tripId],
+    references: [trips.id],
+  }),
+}));
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+  trip: one(trips, {
+    fields: [activities.tripId],
+    references: [trips.id],
+  }),
+}));
+
+export const restaurantsRelations = relations(restaurants, ({ one }) => ({
+  trip: one(trips, {
+    fields: [restaurants.tripId],
+    references: [trips.id],
+  }),
+}));
+
+// Insert schemas
+export const insertTripSchema = createInsertSchema(trips).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBudgetItemSchema = createInsertSchema(budgetItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertActivitySchema = createInsertSchema(activities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRestaurantSchema = createInsertSchema(restaurants).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types
+export type UpsertUser = typeof users.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type InsertTrip = z.infer<typeof insertTripSchema>;
+export type Trip = typeof trips.$inferSelect;
+export type InsertBudgetItem = z.infer<typeof insertBudgetItemSchema>;
+export type BudgetItem = typeof budgetItems.$inferSelect;
+export type InsertActivity = z.infer<typeof insertActivitySchema>;
+export type Activity = typeof activities.$inferSelect;
+export type InsertRestaurant = z.infer<typeof insertRestaurantSchema>;
+export type Restaurant = typeof restaurants.$inferSelect;
+
+// Trip with relations type
+export type TripWithDetails = Trip & {
+  budgetItems: BudgetItem[];
+  activities: Activity[];
+  restaurants: Restaurant[];
+};
