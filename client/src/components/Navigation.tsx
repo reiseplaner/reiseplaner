@@ -12,9 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Navigation() {
   const [location, setLocation] = useLocation();
-  const { user } = useAuth();
-
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const handleLogout = () => {
     signOut();
@@ -58,7 +56,7 @@ export default function Navigation() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={user?.profileImageUrl || ""} alt={user?.firstName || ""} />
+                    <AvatarImage src={user?.user_metadata?.avatar_url || ""} alt={user?.user_metadata?.full_name || ""} />
                     <AvatarFallback>
                       <User className="h-4 w-4" />
                     </AvatarFallback>
@@ -68,7 +66,7 @@ export default function Navigation() {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <div className="flex flex-col space-y-1 p-2">
                   <p className="text-sm font-medium leading-none">
-                    {user?.firstName} {user?.lastName}
+                    {user?.user_metadata?.full_name || 'Benutzer'}
                   </p>
                   <p className="text-xs leading-none text-muted-foreground">
                     {user?.email}
