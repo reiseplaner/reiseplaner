@@ -14,8 +14,10 @@ export default function Navigation() {
   const [location, setLocation] = useLocation();
   const { user } = useAuth();
 
+  const { signOut } = useAuth();
+
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    signOut();
   };
 
   return (

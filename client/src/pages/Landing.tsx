@@ -1,10 +1,9 @@
 import { MapPin, Wallet, Calendar, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
-  };
+  const { signInWithGoogle } = useAuth();
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -16,8 +15,8 @@ export default function Landing() {
               <MapPin className="h-8 w-8 text-primary mr-3" />
               <span className="text-xl font-bold text-slate-900">ReiseVeteran</span>
             </div>
-            <Button onClick={handleLogin} className="bg-primary text-white hover:bg-primary/90">
-              Anmelden
+            <Button onClick={signInWithGoogle} className="bg-primary text-white hover:bg-primary/90">
+              Mit Google anmelden
             </Button>
           </div>
         </div>
@@ -37,7 +36,7 @@ export default function Landing() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
-                  onClick={handleLogin}
+                  onClick={signInWithGoogle}
                   className="bg-white text-primary px-8 py-3 text-lg font-semibold hover:bg-slate-50"
                 >
                   Jetzt Reise planen
