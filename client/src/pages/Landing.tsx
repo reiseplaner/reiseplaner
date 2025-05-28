@@ -1,9 +1,81 @@
-import { MapPin, Wallet, Calendar, FileDown } from "lucide-react";
+import { MapPin, Wallet, Calendar, FileDown, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Landing() {
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { toast } = useToast();
+  const [isLoading, setIsLoading] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      await signInWithGoogle();
+    } catch (error) {
+      toast({
+        title: "Anmeldung fehlgeschlagen",
+        description: "Es gab ein Problem bei der Google-Anmeldung. Bitte versuche es erneut.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      setIsLoading(true);
+      await signInWithEmail(email, password);
+      toast({
+        title: "Erfolgreich angemeldet!",
+        description: "Willkommen zurück bei ReiseVeteran.",
+      });
+    } catch (error) {
+      toast({
+        title: "Anmeldung fehlgeschlagen",
+        description: "E-Mail oder Passwort ist falsch. Bitte versuche es erneut.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEmailSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const email = formData.get('email') as string;
+    const password = formData.get('password') as string;
+
+    try {
+      setIsLoading(true);
+      await signUpWithEmail(email, password);
+      toast({
+        title: "Registrierung erfolgreich!",
+        description: "Bitte prüfe deine E-Mails für die Bestätigung.",
+      });
+    } catch (error) {
+      toast({
+        title: "Registrierung fehlgeschlagen",
+        description: "Es gab ein Problem bei der Registrierung. Bitte versuche es erneut.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -15,8 +87,8 @@ export default function Landing() {
               <MapPin className="h-8 w-8 text-primary mr-3" />
               <span className="text-xl font-bold text-slate-900">ReiseVeteran</span>
             </div>
-            <Button onClick={signInWithGoogle} className="bg-primary text-white hover:bg-primary/90">
-              Mit Google anmelden
+            <Button onClick={() => setShowAuth(true)} className="bg-primary text-white hover:bg-primary/90">
+              Anmelden
             </Button>
           </div>
         </div>
@@ -36,7 +108,7 @@ export default function Landing() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
-                  onClick={signInWithGoogle}
+                  onClick={() => setShowAuth(true)}
                   className="bg-white text-primary px-8 py-3 text-lg font-semibold hover:bg-slate-50"
                 >
                   Jetzt Reise planen
@@ -102,6 +174,143 @@ export default function Landing() {
           </div>
         </div>
       </section>
+
+      {/* Auth Modal */}
+      {showAuth && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-2xl font-bold">Willkommen</CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAuth(false)}
+                  className="h-8 w-8 p-0"
+                >
+                  ✕
+                </Button>
+              </div>
+              <CardDescription>
+                Melde dich an oder erstelle ein neues Konto
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="signin" className="space-y-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="signin">Anmelden</TabsTrigger>
+                  <TabsTrigger value="signup">Registrieren</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="signin" className="space-y-4">
+                  <form onSubmit={handleEmailSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">E-Mail</Label>
+                      <Input
+                        id="signin-email"
+                        name="email"
+                        type="email"
+                        placeholder="deine@email.com"
+                        required
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-password">Passwort</Label>
+                      <Input
+                        id="signin-password"
+                        name="password"
+                        type="password"
+                        placeholder="••••••••"
+                        required
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Anmeldung läuft..." : "Anmelden"}
+                    </Button>
+                  </form>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">oder</span>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={handleGoogleSignIn}
+                    variant="outline"
+                    className="w-full"
+                    disabled={isLoading}
+                  >
+                    Mit Google anmelden
+                  </Button>
+                </TabsContent>
+                
+                <TabsContent value="signup" className="space-y-4">
+                  <form onSubmit={handleEmailSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">E-Mail</Label>
+                      <Input
+                        id="signup-email"
+                        name="email"
+                        type="email"
+                        placeholder="deine@email.com"
+                        required
+                        disabled={isLoading}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Passwort</Label>
+                      <Input
+                        id="signup-password"
+                        name="password"
+                        type="password"
+                        placeholder="••••••••"
+                        required
+                        disabled={isLoading}
+                        minLength={6}
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading}
+                    >
+                      {isLoading ? "Registrierung läuft..." : "Konto erstellen"}
+                    </Button>
+                  </form>
+                  
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <span className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">oder</span>
+                    </div>
+                  </div>
+                  
+                  <Button
+                    onClick={handleGoogleSignIn}
+                    variant="outline"
+                    className="w-full"
+                    disabled={isLoading}
+                  >
+                    Mit Google registrieren
+                  </Button>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
