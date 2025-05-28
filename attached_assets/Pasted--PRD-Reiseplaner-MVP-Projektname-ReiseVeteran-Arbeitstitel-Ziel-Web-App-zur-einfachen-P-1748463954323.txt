@@ -1,0 +1,259 @@
+📝 PRD – Reiseplaner MVP  
+
+Projektname: ReiseVeteran (Arbeitstitel) 
+ Ziel: Web-App zur einfachen Planung von Reisebudget, Aktivitäten und Restaurants, inkl. Export- und Kalenderansicht. MVP-fokus: Struktur + Nutzerwert vor API-Integration. 
+
+ 
+
+⚙️ Tech Stack 
+
+Bereich 
+
+Technologie 
+
+Frontend 
+
+Next.js + shadcn/ui 
+
+Auth 
+
+Supabase Auth 
+
+Datenbank 
+
+Supabase Postgres 
+
+Kalender 
+
+react-big-calendar 
+
+Hosting 
+
+Replit 
+
+Export 
+
+jsPDF, Papaparse 
+
+ 
+
+🧩 Seiten & Kernfeatures 
+
+1. Landing Page (/) 
+
+Projektvorstellung, Vorteile 
+
+CTA: „Jetzt Reise planen“ 
+
+Navigation zu Login & Pricing 
+
+2. Login Page (/login) 
+
+Login via E-Mail (Magic Link) oder Google (Supabase Auth) 
+
+3. Dashboard (/dashboard) 
+
+Übersicht aller Reisen 
+
+„Neue Reise starten“ Button 
+
+Bearbeiten / Löschen-Funktion 
+
+4. Reiseplanungsseite (/reisen/[id]) 
+
+A. Allgemeine Reisedaten 
+
+Abflughafen, Zielort (IATA Codes) 
+
+Reisedaten: Start / Ende 
+
+Anzahl Personen 
+
+Gesamtbudget (Pflichtfeld) 
+
+B. Budgetplanung 
+
+Ganz oben ein Feld für das Gesamtbudget 
+
+Hauptkategorien: Transport, Unterkunft, Verpflegung, Aktivitäten, Versicherung, Sonstiges 
+
+Unterkategorien via Dropdown + „Andere...“-Option mit Freitextfeld 
+
+Felder je Eintrag: 
+
+Unterkategorie, Menge, Einheitspreis, Summe, Kommentar, (optional) Affiliate-Link 
+
+Möglichkeit zum Speichern eigener Unterkategorien 
+
+C. Aktivitätenplanung 
+
+Felder je Eintrag: 
+
+Titel, Ort (mit Google Maps Autocomplete), Datum, Uhrzeit, Preis, Kommentar, Buchungslink, Status (geplant/gebucht) 
+
+D. Restaurantplanung 
+
+Felder je Eintrag: 
+
+Name, Adresse (mit Maps-Autocomplete), Datum, Uhrzeit, Küche, Preis, Reservierungslink, Status (geplant/reserviert) 
+
+E. Empfehlungsplatzhalter 
+
+Unterhalb von Budget/Aktivitäten: 
+
+Bereich „Unsere Empfehlungen“ (inaktiv im MVP) 
+
+Platzhalter-Komponenten für: 
+
+Mietwagen-Angebote 
+
+Aktivitäten-Vorschläge 
+
+F. Kalenderansicht (automatisch generiert) 
+
+Kalender zeigt: 
+
+Alle Aktivitäten + Restaurantbesuche mit Datum & Uhrzeit 
+
+Farbliche Unterscheidung nach Typ 
+
+Eventuelle Optionen: 
+
+Klick für Details 
+
+Ansicht: Woche / Tag 
+
+G. Exportfunktion 
+
+Button: „Exportieren“ 
+
+PDF & CSV enthalten: Budget, Aktivitäten, Restaurants, Links 
+
+ 
+
+🗃️ Datenstruktur (Kurzform) 
+
+reise: { 
+  ... 
+  gesamtbudget: number, 
+ 
+  aktivitaeten: [ 
+    { 
+      titel: string, 
+      ort: string, 
+      datum: string, 
+      uhrzeit: string,   // z. B. "14:30" 
+      ... 
+    } 
+  ], 
+  restaurants: [ 
+    { 
+      name: string, 
+      adresse: string, 
+      datum: string, 
+      uhrzeit: string,   // z. B. "19:00" 
+      ... 
+    } 
+  ], 
+  empfehlungen: { 
+    mietwagen: [...], 
+    aktivitaeten: [...] 
+  } 
+} 
+ 
+
+5. Community-Teilen & öffentliche Reisepläne (optional aktivierbar) 
+
+A. Reiseplan öffentlich teilen 
+
+Im Reiseplaner (/reisen/[id]) können Nutzer optional ein Häkchen setzen: 
+
+✅ "Diesen Reiseplan öffentlich machen" 
+
+Beim Aktivieren wird ein lesbarer, öffentlicher Link generiert (z. B. /reisen/public/bali-2025-marias-trip) 
+
+Öffentliche Pläne sind nicht bearbeitbar, nur anschaubar 
+
+B. Inhalt der öffentlichen Ansicht 
+
+Titel, Reisedaten, Ziel, Budget (optional) 
+
+Aktivitäten & Restaurantplanung mit Datum, Uhrzeit, Kommentaren 
+
+Affiliate-/Buchungslinks (bleiben aktiv, falls gesetzt) 
+
+Button: „Diesen Reiseplan kopieren“ → erstellt neue private Reise für eingeloggte Nutzer 
+
+C. Community-Sektion im Dashboard 
+
+Unterhalb des eigenen Dashboards erscheint ein neuer Abschnitt: 
+
+🧭 "Inspiration aus der Community" 
+
+Zeigt bis zu 6–10 zufällig ausgewählte oder relevante öffentliche Pläne anderer Nutzer 
+
+Optional filterbar nach Zielort, Dauer, Reisezeitraum 
+
+ 
+
+🗃️ Erweiterte Datenstruktur 
+
+reise: { 
+  ... 
+  ist_oeffentlich: boolean,       // false = privat (Standard) 
+  public_slug?: string,           // z. B. "bali-2025-marias-trip" 
+  kurzbeschreibung?: string       // optional für öffentliche Anzeige 
+} 
+ 
+
+ 
+
+🔐 Sicherheit & Zugriff 
+
+Öffentliche Pläne sind nur lesbar 
+
+Authentifizierte Nutzer dürfen: 
+
+öffentliche Pläne kopieren (in eigenes Profil) 
+
+eigene Pläne jederzeit wieder „privat“ setzen 
+
+ 
+
+📈 Perspektive für später 
+
+Likes / Favoriten-Funktion 
+
+Kommentarbereich / Feedback zu Reisen 
+
+Öffentliche Nutzerprofile 
+
+Sortierung nach Beliebtheit / Neueste Pläne 
+
+🧠 Was du mit gesamtbudget tun sollst: 
+
+Fortschrittsanzeige: z. B. „Du hast 78 % deines Budgets verplant“ 
+
+Tagesbudget-Berechnung: Gesamtbudget ÷ Reisedauer 
+
+Budgetüberschreitungswarnung 
+
+💡 Hinweise für spätere Erweiterung 
+
+Platzhalter in UI für Hotel-/Flugempfehlungen (API später einbindbar) 
+
+Affiliate-Link-Felder können schon erfasst, aber noch nicht befüllt werden 
+
+ 
+
+✅ MVP-Ziel erreicht, wenn: 
+
+Nutzer eine Reise mit Budget, Aktivitäten & Restaurants planen können 
+
+Ein dynamischer Kalender erzeugt wird 
+
+Export als PDF/CSV funktioniert 
+
+Oberfläche ist übersichtlich und responsiv 
+
+Empfehlungskarten können zu späterem Zeitpunkt einfach ergänzt werden 
