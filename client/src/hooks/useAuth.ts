@@ -38,25 +38,31 @@ export function useAuth() {
   };
 
   const signInWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    console.log('Attempting to sign in with email:', email);
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
+    console.log('Sign in response:', { data, error });
     if (error) {
       console.error('Error signing in with email:', error);
       throw error;
     }
+    return data;
   };
 
   const signUpWithEmail = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({
+    console.log('Attempting to sign up with email:', email);
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
+    console.log('Sign up response:', { data, error });
     if (error) {
       console.error('Error signing up with email:', error);
       throw error;
     }
+    return data;
   };
 
   const signOut = async () => {
