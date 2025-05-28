@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { supabaseAuth } from "./supabaseAuth";
 import {
   insertTripSchema,
   insertBudgetItemSchema,
@@ -11,14 +11,10 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Auth middleware
-  await setupAuth(app);
-
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', supabaseAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
+      const user = req.user;
       res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -27,9 +23,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Trip routes
-  app.get('/api/trips', isAuthenticated, async (req: any, res) => {
+  app.get('/api/trips', supabaseAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const trips = await storage.getTripsByUserId(userId);
       res.json(trips);
     } catch (error) {
@@ -38,9 +34,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/trips/:id', isAuthenticated, async (req: any, res) => {
+  app.get('/api/trips/:id', supabaseAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const tripId = parseInt(req.params.id);
       const trip = await storage.getTripById(tripId, userId);
       
@@ -55,9 +51,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/trips', isAuthenticated, async (req: any, res) => {
+  app.post('/api/trips', supabaseAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const tripData = insertTripSchema.parse({ ...req.body, userId });
       const trip = await storage.createTrip(tripData);
       res.json(trip);
@@ -67,9 +63,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/trips/:id', isAuthenticated, async (req: any, res) => {
+  app.put('/api/trips/:id', supabaseAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const tripId = parseInt(req.params.id);
       const tripData = insertTripSchema.partial().parse(req.body);
       const trip = await storage.updateTrip(tripId, tripData, userId);
@@ -85,9 +81,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/trips/:id', isAuthenticated, async (req: any, res) => {
+  app.delete('/api/trips/:id', supabaseAuth, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const tripId = parseInt(req.params.id);
       const success = await storage.deleteTrip(tripId, userId);
       
@@ -130,7 +126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Budget item routes
-  app.post('/api/trips/:tripId/budget-items', isAuthenticated, async (req: any, res) => {
+  app.post('/api/trips/:tripId/budget-items', supabaseAuth, async (req: any, res) => {
     try {
       const tripId = parseInt(req.params.tripId);
       const budgetItemData = insertBudgetItemSchema.parse({ ...req.body, tripId });
@@ -142,7 +138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/budget-items/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/budget-items/:id', supabaseAuth, async (req, res) => {
     try {
       const budgetItemId = parseInt(req.params.id);
       const budgetItemData = insertBudgetItemSchema.partial().parse(req.body);
@@ -159,7 +155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/budget-items/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/budget-items/:id', supabaseAuth, async (req, res) => {
     try {
       const budgetItemId = parseInt(req.params.id);
       const success = await storage.deleteBudgetItem(budgetItemId);
@@ -176,7 +172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Activity routes
-  app.post('/api/trips/:tripId/activities', isAuthenticated, async (req: any, res) => {
+  app.post('/api/trips/:tripId/activities', supabaseAuth, async (req: any, res) => {
     try {
       const tripId = parseInt(req.params.tripId);
       const activityData = insertActivitySchema.parse({ ...req.body, tripId });
@@ -188,7 +184,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/activities/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/activities/:id', supabaseAuth, async (req, res) => {
     try {
       const activityId = parseInt(req.params.id);
       const activityData = insertActivitySchema.partial().parse(req.body);
@@ -205,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/activities/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/activities/:id', supabaseAuth, async (req, res) => {
     try {
       const activityId = parseInt(req.params.id);
       const success = await storage.deleteActivity(activityId);
@@ -222,7 +218,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Restaurant routes
-  app.post('/api/trips/:tripId/restaurants', isAuthenticated, async (req: any, res) => {
+  app.post('/api/trips/:tripId/restaurants', supabaseAuth, async (req: any, res) => {
     try {
       const tripId = parseInt(req.params.tripId);
       const restaurantData = insertRestaurantSchema.parse({ ...req.body, tripId });
@@ -234,7 +230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/restaurants/:id', isAuthenticated, async (req, res) => {
+  app.put('/api/restaurants/:id', supabaseAuth, async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.id);
       const restaurantData = insertRestaurantSchema.partial().parse(req.body);
@@ -251,7 +247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/restaurants/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/restaurants/:id', supabaseAuth, async (req, res) => {
     try {
       const restaurantId = parseInt(req.params.id);
       const success = await storage.deleteRestaurant(restaurantId);
