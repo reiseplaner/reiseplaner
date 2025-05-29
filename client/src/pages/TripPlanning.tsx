@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Save, Share, Download } from "lucide-react";
@@ -57,6 +57,21 @@ export default function TripPlanning() {
       totalBudget: trip?.totalBudget || "1000",
     },
   });
+
+  // Formular zurücksetzen, wenn sich trip ändert
+  useEffect(() => {
+    if (trip) {
+      form.reset({
+        name: trip.name || "",
+        departure: trip.departure || "",
+        destination: trip.destination || "",
+        startDate: trip.startDate || undefined,
+        endDate: trip.endDate || undefined,
+        travelers: trip.travelers || 1,
+        totalBudget: trip.totalBudget || "1000",
+      });
+    }
+  }, [trip]);
 
   const updateTripMutation = useMutation({
     mutationFn: async (data: z.infer<typeof generalDataSchema>) => {
@@ -308,7 +323,7 @@ export default function TripPlanning() {
 
           {/* Budget Tab */}
           <TabsContent value="budget">
-            <BudgetOverview trip={trip} />
+            <BudgetOverview trip={Array.isArray(trip) ? trip[0] : trip} />
           </TabsContent>
 
           {/* Activities Tab */}

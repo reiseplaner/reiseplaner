@@ -26,6 +26,7 @@ const budgetItemFormSchema = insertBudgetItemSchema.extend({
 });
 
 export default function BudgetOverview({ trip }: BudgetOverviewProps) {
+  console.log("trip in BudgetOverview:", trip);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -323,7 +324,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
           </div>
         </CardHeader>
         <CardContent>
-          {trip.budgetItems.length === 0 ? (
+          {!trip.budgetItems || trip.budgetItems.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
               <p>Noch keine Budget-Einträge vorhanden.</p>
               <p className="text-sm">Füge deinen ersten Eintrag hinzu, um zu beginnen.</p>
