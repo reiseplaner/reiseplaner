@@ -286,7 +286,7 @@ export default function RestaurantList({ trip }: RestaurantListProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {trip.restaurants.length === 0 ? (
+        {(trip.restaurants || []).length === 0 ? (
           <div className="text-center py-8 text-slate-500">
             <div className="text-4xl mb-4">🍽️</div>
             <p className="mb-2">Noch keine Restaurants geplant.</p>
@@ -294,7 +294,7 @@ export default function RestaurantList({ trip }: RestaurantListProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {trip.restaurants.map((restaurant) => (
+            {(trip.restaurants || []).map((restaurant) => (
               <Card key={restaurant.id} className="border border-slate-200">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">

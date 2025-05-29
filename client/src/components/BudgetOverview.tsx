@@ -99,7 +99,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
 
   const calculateBudgetSummary = () => {
     const totalBudget = parseFloat(trip.totalBudget || "0");
-    const plannedBudget = trip.budgetItems.reduce((sum, item) => {
+    const plannedBudget = (trip.budgetItems || []).reduce((sum, item) => {
       return sum + parseFloat(item.totalPrice || "0");
     }, 0);
     const remaining = totalBudget - plannedBudget;

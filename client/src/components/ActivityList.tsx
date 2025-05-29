@@ -257,7 +257,7 @@ export default function ActivityList({ trip }: ActivityListProps) {
         </div>
       </CardHeader>
       <CardContent>
-        {trip.activities.length === 0 ? (
+        {(trip.activities || []).length === 0 ? (
           <div className="text-center py-8 text-slate-500">
             <div className="text-4xl mb-4">🎯</div>
             <p className="mb-2">Noch keine Aktivitäten geplant.</p>
@@ -265,7 +265,7 @@ export default function ActivityList({ trip }: ActivityListProps) {
           </div>
         ) : (
           <div className="space-y-4">
-            {trip.activities.map((activity) => (
+            {(trip.activities || []).map((activity) => (
               <Card key={activity.id} className="border border-slate-200">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
