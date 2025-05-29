@@ -14,8 +14,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', supabaseAuth, async (req: any, res) => {
     try {
-      const user = req.user;
-      res.json(user);
+      const supabaseUser = req.user;
+      
+      // Ensure user exists in our database
+      await storage.upsertUser({
+        id: supabaseUser.id,
+        email: supabaseUser.email,
+        firstName: supabaseUser.user_metadata?.full_name?.split(' ')[0] || null,
+        lastName: supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
+        profileImageUrl: supabaseUser.user_metadata?.avatar_url || null,
+      });
+      
+      res.json(supabaseUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
