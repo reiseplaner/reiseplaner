@@ -62,18 +62,45 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(userData)
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
-    return user;
+    try {
+      // Try to insert new user
+      const [user] = await db
+        .insert(users)
+        .values(userData)
+        .returning();
+      return user;
+    } catch (error: any) {
+      if (error.code === '23505') {
+        // Handle both email and id conflicts
+        if (error.detail?.includes('email')) {
+          // Email conflict - update existing user with same email
+          const [user] = await db
+            .update(users)
+            .set({
+              id: userData.id,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              profileImageUrl: userData.profileImageUrl,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.email, userData.email!))
+            .returning();
+          return user;
+        } else {
+          // ID conflict - update existing user with same id
+          const [user] = await db
+            .update(users)
+            .set({
+              ...userData,
+              updatedAt: new Date(),
+            })
+            .where(eq(users.id, userData.id))
+            .returning();
+          return user;
+        }
+      }
+      throw error;
+    }
   }
 
   // Trip operations
