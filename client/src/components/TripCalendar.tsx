@@ -37,7 +37,7 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     const calendarEvents: CalendarEvent[] = [];
 
     // Add activities to calendar
-    trip.activities.forEach((activity) => {
+    (trip.activities || []).forEach((activity) => {
       if (activity.date) {
         const activityDate = new Date(activity.date);
         
@@ -66,7 +66,7 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     });
 
     // Add restaurants to calendar
-    trip.restaurants.forEach((restaurant) => {
+    (trip.restaurants || []).forEach((restaurant) => {
       if (restaurant.date) {
         const restaurantDate = new Date(restaurant.date);
         
