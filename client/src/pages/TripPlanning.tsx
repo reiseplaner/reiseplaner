@@ -54,13 +54,13 @@ export default function TripPlanning() {
       startDate: trip?.startDate || undefined,
       endDate: trip?.endDate || undefined,
       travelers: trip?.travelers || 1,
-      totalBudget: trip?.totalBudget || "1000",
+      totalBudget: trip?.totalBudget !== undefined && trip?.totalBudget !== null ? String(trip.totalBudget) : "",
     },
   });
 
   // Formular zurücksetzen, wenn sich trip ändert
   useEffect(() => {
-    if (trip) {
+    if (trip && !form.formState.isDirty) {
       form.reset({
         name: trip.name || "",
         departure: trip.departure || "",
@@ -68,17 +68,19 @@ export default function TripPlanning() {
         startDate: trip.startDate || undefined,
         endDate: trip.endDate || undefined,
         travelers: trip.travelers || 1,
-        totalBudget: trip.totalBudget || "1000",
+        totalBudget: trip.totalBudget !== undefined && trip.totalBudget !== null ? String(trip.totalBudget) : "",
       });
     }
-  }, [trip]);
+  }, [trip, form.formState.isDirty]);
 
   const updateTripMutation = useMutation({
     mutationFn: async (data: z.infer<typeof generalDataSchema>) => {
       const response = await apiRequest("PUT", `/api/trips/${id}`, data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (updatedTrip) => {
+      // Formular als "sauber" markieren, damit es nicht durch useEffect zurückgesetzt wird
+      form.reset(form.getValues());
       queryClient.invalidateQueries({ queryKey: ["/api/trips", id] });
       toast({
         title: "Reise gespeichert",

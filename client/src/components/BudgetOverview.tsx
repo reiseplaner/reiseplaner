@@ -41,6 +41,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       unitPrice: "",
       comment: "",
       affiliateLink: "",
+      totalBudget: trip?.totalBudget !== undefined && trip?.totalBudget !== null ? String(trip.totalBudget) : "",
     },
   });
 
@@ -56,7 +57,8 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (trip) => {
+      console.log("Backend-Antwort:", trip);
       queryClient.invalidateQueries({ queryKey: ["/api/trips", trip.id.toString()] });
       setIsDialogOpen(false);
       form.reset();
@@ -132,6 +134,8 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     "Versicherung",
     "Sonstiges"
   ];
+
+  const watchedTotalBudget = form.watch("totalBudget");
 
   return (
     <div className="space-y-6">
