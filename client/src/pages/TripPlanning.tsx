@@ -21,15 +21,13 @@ import { exportTripToPDF, exportTripToCSV } from "@/lib/exportUtils";
 import { insertTripSchema, type TripWithDetails } from "@shared/schema";
 import { z } from "zod";
 
-const generalDataSchema = insertTripSchema.pick({
-  name: true,
-  departure: true,
-  destination: true,
-  startDate: true,
-  endDate: true,
-  travelers: true,
-  totalBudget: true,
-}).extend({
+const generalDataSchema = z.object({
+  name: z.string().min(1, "Reisename ist erforderlich"),
+  departure: z.string().optional(),
+  destination: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  travelers: z.number().min(1, "Mindestens 1 Person erforderlich"),
   totalBudget: z.string().min(1, "Gesamtbudget ist erforderlich"),
 });
 
@@ -48,34 +46,43 @@ export default function TripPlanning() {
   const form = useForm<z.infer<typeof generalDataSchema>>({
     resolver: zodResolver(generalDataSchema),
     defaultValues: {
-      name: trip?.name || "",
-      departure: trip?.departure || "",
-      destination: trip?.destination || "",
-      startDate: trip?.startDate || undefined,
-      endDate: trip?.endDate || undefined,
-      travelers: trip?.travelers || 1,
-      totalBudget: trip?.totalBudget !== undefined && trip?.totalBudget !== null ? String(trip.totalBudget) : "",
+      name: "",
+      departure: "",
+      destination: "",
+      startDate: "",
+      endDate: "",
+      travelers: 1,
+      totalBudget: "",
     },
   });
 
   // Formular zurücksetzen, wenn sich trip ändert
   useEffect(() => {
-    if (trip && !form.formState.isDirty) {
+    if (trip) {
       form.reset({
-        name: trip.name || "",
-        departure: trip.departure || "",
-        destination: trip.destination || "",
-        startDate: trip.startDate || undefined,
-        endDate: trip.endDate || undefined,
-        travelers: trip.travelers || 1,
+        name: trip.name ?? "",
+        departure: trip.departure ?? "",
+        destination: trip.destination ?? "",
+        startDate: trip.startDate ?? "",
+        endDate: trip.endDate ?? "",
+        travelers: trip.travelers ?? 1,
         totalBudget: trip.totalBudget !== undefined && trip.totalBudget !== null ? String(trip.totalBudget) : "",
       });
     }
-  }, [trip, form.formState.isDirty]);
+  }, [trip, form]);
 
   const updateTripMutation = useMutation({
     mutationFn: async (data: z.infer<typeof generalDataSchema>) => {
-      const response = await apiRequest("PUT", `/api/trips/${id}`, data);
+      // Transform form data to match API expectations
+      const apiData = {
+        ...data,
+        departure: data.departure || null,
+        destination: data.destination || null,
+        startDate: data.startDate || null,
+        endDate: data.endDate || null,
+        totalBudget: data.totalBudget ? parseFloat(data.totalBudget) : null,
+      };
+      const response = await apiRequest("PUT", `/api/trips/${id}`, apiData);
       return response.json();
     },
     onSuccess: (updatedTrip) => {

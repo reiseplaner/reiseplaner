@@ -20,7 +20,7 @@ function Router() {
       ) : (
         <>
           <Route path="/" component={Dashboard} />
-          <Route path="/trips/:id" component={TripPlanning} />
+          <Route path="/trip-planning/:id" component={TripPlanning} />
           <Route path="/community" component={Community} />
         </>
       )}
