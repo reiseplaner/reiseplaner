@@ -96,9 +96,20 @@ export default function TripPlanning() {
     onSuccess: (updatedTrip) => {
       console.log("Trip successfully updated:", updatedTrip);
       console.log("Current form values before reset:", form.getValues());
-      // NICHT das Formular zurücksetzen - die Werte sollen erhalten bleiben
-      // isInitialLoadRef.current = true;
-      queryClient.invalidateQueries({ queryKey: ["/api/trips", id] });
+      
+      // Update cache directly to preserve budget items and other relations
+      queryClient.setQueryData(["/api/trips", id], (oldData: TripWithDetails | undefined) => {
+        if (!oldData) return updatedTrip;
+        
+        // Merge the updated trip data with existing relations
+        return {
+          ...updatedTrip,
+          budgetItems: oldData.budgetItems || [],
+          activities: oldData.activities || [],
+          restaurants: oldData.restaurants || [],
+        };
+      });
+      
       toast({
         title: "Reise gespeichert",
         description: "Deine Änderungen wurden erfolgreich gespeichert.",

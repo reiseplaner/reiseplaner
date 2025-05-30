@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit, Trash2 } from "lucide-react";
+import { Plus, Edit, Trash2, ExternalLink, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,11 +24,78 @@ const budgetItemFormSchema = insertBudgetItemSchema.extend({
   totalPrice: z.string().optional(),
 });
 
+// Subcategory options for each main category
+const subcategoryOptions = {
+  "Transport": [
+    "Flug",
+    "Bahn", 
+    "Mietwagen",
+    "Öffentliche Verkehrsmittel",
+    "Taxi / Uber / Grab",
+    "Fähre / Boot",
+    "Fahrrad / Roller",
+    "Parkgebühren",
+    "Sonstiges"
+  ],
+  "Hotel": [
+    "Hotel",
+    "Hostel",
+    "Airbnb / Ferienwohnung",
+    "Campingplatz",
+    "Resort",
+    "Homestay / Gastfamilie",
+    "Übernachtung im Zug / Bus",
+    "Sonstiges"
+  ],
+  "Verpflegung": [
+    "Frühstück",
+    "Mittagessen",
+    "Abendessen",
+    "Snacks / Streetfood",
+    "Supermarkt / Selbstverpflegung",
+    "Getränke / Bars / Alkohol",
+    "Sonstiges"
+  ],
+  "Aktivitäten": [
+    "Stadtführung",
+    "Sehenswürdigkeiten",
+    "Outdoor-Abenteuer (z. B. Tauchen, Wandern)",
+    "Museen / Kultur",
+    "Touren (Tagesausflüge, Mehrtagestouren)",
+    "Sport (z. B. Surfen, Skifahren, Fitnessstudio)",
+    "Veranstaltungen / Konzerte",
+    "Wellness / Spa / Massage",
+    "Kurs / Workshop (z. B. Kochkurs)",
+    "Freizeitpark / Zoo",
+    "Sonstiges"
+  ],
+  "Versicherung": [
+    "Reisekrankenversicherung",
+    "Reiserücktrittsversicherung",
+    "Gepäckversicherung",
+    "Mietwagenversicherung",
+    "Auslandshaftpflicht",
+    "Sonstiges"
+  ],
+  "Sonstiges": [
+    "Souvenirs / Geschenke",
+    "SIM-Karte / Internet",
+    "Gebühren (Visum, Einreise, Wechselkurs)",
+    "Trinkgelder",
+    "Reinigung / Wäsche",
+    "Apps / digitale Dienste",
+    "Notfallreserven",
+    "Sonstiges"
+  ]
+};
+
 export default function BudgetOverview({ trip }: BudgetOverviewProps) {
-  console.log("trip in BudgetOverview:", trip);
+  console.log("🔄 BudgetOverview re-rendered mit trip:", trip);
+  console.log("🔄 Budget Items Anzahl:", trip.budgetItems?.length || 0);
+  
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
 
   const form = useForm<z.infer<typeof budgetItemFormSchema>>({
@@ -41,33 +107,67 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       unitPrice: "",
       comment: "",
       affiliateLink: "",
-      totalBudget: trip?.totalBudget !== undefined && trip?.totalBudget !== null ? String(trip.totalBudget) : "",
     },
   });
 
   const createBudgetItemMutation = useMutation({
     mutationFn: async (data: z.infer<typeof budgetItemFormSchema>) => {
+      console.log("🔵 Mutation gestartet mit Form-Daten:", data);
+      
       const unitPrice = parseFloat(data.unitPrice);
       const totalPrice = unitPrice * (data.quantity || 1);
       
-      const response = await apiRequest("POST", `/api/trips/${trip.id}/budget-items`, {
-        ...data,
+      // Clean up the data before sending
+      const cleanData = {
+        tripId: trip.id,
+        category: data.category,
+        subcategory: data.subcategory || null,
+        quantity: data.quantity || 1,
         unitPrice: unitPrice.toString(),
         totalPrice: totalPrice.toString(),
-      });
-      return response.json();
+        comment: data.comment || null,
+        affiliateLink: data.affiliateLink || null,
+      };
+      
+      console.log("🔵 Daten, die gespeichert werden:", cleanData);
+      console.log("🔵 API-URL:", `/api/trips/${trip.id}/budget-items`);
+      
+      const response = await apiRequest("POST", `/api/trips/${trip.id}/budget-items`, cleanData);
+      const result = await response.json();
+      
+      console.log("🔵 Backend-Antwort (newBudgetItem):", result);
+      
+      return result;
     },
-    onSuccess: (trip) => {
-      console.log("Backend-Antwort:", trip);
-      queryClient.invalidateQueries({ queryKey: ["/api/trips", trip.id.toString()] });
-      setIsDialogOpen(false);
+    onSuccess: (newBudgetItem) => {
+      console.log("🟢 onSuccess aufgerufen mit:", newBudgetItem);
+      
+      // Update the cache directly with the new budget item
+      queryClient.setQueryData(["/api/trips", trip.id.toString()], (oldData: TripWithDetails | undefined) => {
+        if (!oldData) return oldData;
+        
+        console.log("🟢 Aktualisiere Cache direkt. Alte budgetItems:", oldData.budgetItems?.length || 0);
+        
+        const updatedTrip = {
+          ...oldData,
+          budgetItems: [...(oldData.budgetItems || []), newBudgetItem]
+        };
+        
+        console.log("🟢 Neue budgetItems nach Update:", updatedTrip.budgetItems.length);
+        return updatedTrip;
+      });
+      
+      console.log("🟢 Cache direkt aktualisiert (ohne Invalidierung), setze UI zurück");
+      setAddingToCategory(null);
       form.reset();
+      
       toast({
         title: "Budget-Eintrag erstellt",
         description: "Der Budget-Eintrag wurde erfolgreich hinzugefügt.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("🔴 Error creating budget item:", error);
       toast({
         title: "Fehler",
         description: "Der Budget-Eintrag konnte nicht erstellt werden.",
@@ -79,9 +179,22 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   const deleteBudgetItemMutation = useMutation({
     mutationFn: async (id: number) => {
       await apiRequest("DELETE", `/api/budget-items/${id}`);
+      return id;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/trips", trip.id.toString()] });
+    onSuccess: (deletedId) => {
+      // Update the cache directly by removing the deleted item
+      queryClient.setQueryData(["/api/trips", trip.id.toString()], (oldData: TripWithDetails | undefined) => {
+        if (!oldData) return oldData;
+        
+        const updatedTrip = {
+          ...oldData,
+          budgetItems: oldData.budgetItems?.filter(item => item.id !== deletedId) || []
+        };
+        
+        console.log("🗑️ Budget-Item gelöscht, neue Anzahl:", updatedTrip.budgetItems.length);
+        return updatedTrip;
+      });
+      
       toast({
         title: "Budget-Eintrag gelöscht",
         description: "Der Budget-Eintrag wurde erfolgreich gelöscht.",
@@ -100,6 +213,23 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     createBudgetItemMutation.mutate(data);
   };
 
+  const handleAddNew = (category: string) => {
+    setAddingToCategory(category);
+    form.reset({
+      category,
+      subcategory: "",
+      quantity: 1,
+      unitPrice: "",
+      comment: "",
+      affiliateLink: "",
+    });
+  };
+
+  const handleCancelAdd = () => {
+    setAddingToCategory(null);
+    form.reset();
+  };
+
   const calculateBudgetSummary = () => {
     const totalBudget = parseFloat(trip.totalBudget || "0");
     const plannedBudget = (trip.budgetItems || []).reduce((sum, item) => {
@@ -107,6 +237,15 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     }, 0);
     const remaining = totalBudget - plannedBudget;
     const percentage = totalBudget > 0 ? Math.round((plannedBudget / totalBudget) * 100) : 0;
+    
+    // Debug logs
+    console.log("💰 Budget-Berechnung:");
+    console.log("💰 trip.totalBudget (raw):", trip.totalBudget);
+    console.log("💰 totalBudget (parsed):", totalBudget);
+    console.log("💰 trip.budgetItems:", trip.budgetItems);
+    console.log("💰 plannedBudget:", plannedBudget);
+    console.log("💰 remaining:", remaining);
+    console.log("💰 percentage:", percentage);
     
     // Calculate daily budget
     const startDate = trip.startDate ? new Date(trip.startDate) : null;
@@ -128,14 +267,27 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
 
   const mainCategories = [
     "Transport",
-    "Unterkunft", 
+    "Hotel", 
     "Verpflegung",
     "Aktivitäten",
     "Versicherung",
     "Sonstiges"
   ];
 
-  const watchedTotalBudget = form.watch("totalBudget");
+  // Group budget items by category
+  const groupedBudgetItems = (trip.budgetItems || []).reduce((acc, item) => {
+    const category = item.category || "Sonstiges";
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+    acc[category].push(item);
+    return acc;
+  }, {} as Record<string, BudgetItem[]>);
+
+  // Calculate category totals
+  const getCategoryTotal = (categoryItems: BudgetItem[]) => {
+    return categoryItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || "0"), 0);
+  };
 
   return (
     <div className="space-y-6">
@@ -192,196 +344,219 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
         </CardContent>
       </Card>
 
-      {/* Budget Items */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Budget-Kategorien</CardTitle>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-primary text-white hover:bg-primary/90">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Eintrag hinzufügen
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Budget-Eintrag hinzufügen</DialogTitle>
-                </DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Kategorie</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Kategorie wählen" />
+      {/* Budget Categories */}
+      <div className="space-y-4">
+        {mainCategories.map((category) => {
+          const categoryItems = groupedBudgetItems[category] || [];
+          const categoryTotal = getCategoryTotal(categoryItems);
+          const isAddingToThisCategory = addingToCategory === category;
+          
+          return (
+            <Card key={category}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{category}</CardTitle>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-slate-600">
+                      Gesamt: €{categoryTotal.toLocaleString()}
+                    </span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => handleAddNew(category)}
+                      disabled={addingToCategory !== null}
+                      className="text-xs"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      {category} hinzufügen
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="text-left py-3 px-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Unterkategorie wählen
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Preis
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Einheit
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Gesamt
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Kommentar
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Buchungslink
+                        </th>
+                        <th className="text-left py-3 px-3 text-xs font-medium text-slate-600 uppercase tracking-wider">
+                          Aktionen
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {/* Existing items */}
+                      {categoryItems.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50">
+                          <td className="py-3 px-3 text-sm text-slate-900 font-medium">
+                            {item.subcategory || "-"}
+                          </td>
+                          <td className="py-3 px-3 text-sm text-slate-600">
+                            €{parseFloat(item.unitPrice || "0").toLocaleString()}
+                          </td>
+                          <td className="py-3 px-3 text-sm text-slate-600">
+                            {item.quantity}x
+                          </td>
+                          <td className="py-3 px-3 text-sm font-semibold text-slate-900">
+                            €{parseFloat(item.totalPrice || "0").toLocaleString()}
+                          </td>
+                          <td className="py-3 px-3 text-sm text-slate-600 max-w-xs truncate">
+                            {item.comment || "-"}
+                          </td>
+                          <td className="py-3 px-3 text-sm">
+                            {item.affiliateLink ? (
+                              <a 
+                                href={item.affiliateLink} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Link
+                              </a>
+                            ) : (
+                              <span className="text-slate-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex space-x-1">
+                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => deleteBudgetItemMutation.mutate(item.id)}
+                                disabled={deleteBudgetItemMutation.isPending}
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      
+                      {/* Add new item row */}
+                      {isAddingToThisCategory && (
+                        <tr className="bg-blue-50 border-2 border-blue-200">
+                          <td className="py-3 px-3">
+                            <Select 
+                              value={form.watch("subcategory") || ""} 
+                              onValueChange={(value) => form.setValue("subcategory", value)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Unterkategorie wählen" />
                               </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {mainCategories.map((category) => (
-                                <SelectItem key={category} value={category}>
-                                  {category}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
+                              <SelectContent>
+                                {subcategoryOptions[category as keyof typeof subcategoryOptions]?.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="py-3 px-3">
+                            <Input
+                              type="text"
+                              placeholder="0.00"
+                              value={form.watch("unitPrice") || ""}
+                              onChange={(e) => form.setValue("unitPrice", e.target.value)}
+                              className="w-full"
+                            />
+                          </td>
+                          <td className="py-3 px-3">
+                            <Input
+                              type="number"
+                              value={form.watch("quantity") || 1}
+                              onChange={(e) => form.setValue("quantity", parseInt(e.target.value) || 1)}
+                              className="w-full"
+                              min="1"
+                            />
+                          </td>
+                          <td className="py-3 px-3 text-sm font-semibold text-slate-900">
+                            €{((parseFloat(form.watch("unitPrice") || "0")) * (form.watch("quantity") || 1)).toLocaleString()}
+                          </td>
+                          <td className="py-3 px-3">
+                            <Input
+                              type="text"
+                              placeholder="Kommentar..."
+                              value={form.watch("comment") || ""}
+                              onChange={(e) => form.setValue("comment", e.target.value)}
+                              className="w-full"
+                            />
+                          </td>
+                          <td className="py-3 px-3">
+                            <Input
+                              type="text"
+                              placeholder="https://..."
+                              value={form.watch("affiliateLink") || ""}
+                              onChange={(e) => form.setValue("affiliateLink", e.target.value)}
+                              className="w-full"
+                            />
+                          </td>
+                          <td className="py-3 px-3">
+                            <div className="flex space-x-1">
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                onClick={() => {
+                                  const formData = form.getValues();
+                                  onSubmit(formData);
+                                }}
+                                disabled={createBudgetItemMutation.isPending}
+                              >
+                                <Check className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={handleCancelAdd}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
                       )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="subcategory"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Unterkategorie</FormLabel>
-                          <FormControl>
-                            <Input placeholder="z.B. Flüge, Hotel" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+                      
+                      {/* Empty state */}
+                      {categoryItems.length === 0 && !isAddingToThisCategory && (
+                        <tr>
+                          <td colSpan={7} className="py-6 text-center text-slate-500 bg-slate-50">
+                            <p className="text-sm">Noch keine Einträge in dieser Kategorie.</p>
+                            <p className="text-xs mt-1">Klicke auf "{category} hinzufügen" um zu beginnen.</p>
+                          </td>
+                        </tr>
                       )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="quantity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Menge</FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="number" 
-                                {...field} 
-                                onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="unitPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Preis/Einheit (€)</FormLabel>
-                            <FormControl>
-                              <Input type="text" placeholder="0.00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="comment"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Kommentar (optional)</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Zusätzliche Informationen" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="affiliateLink"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Link (optional)</FormLabel>
-                          <FormControl>
-                            <Input placeholder="https://" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex justify-end space-x-2">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setIsDialogOpen(false)}
-                      >
-                        Abbrechen
-                      </Button>
-                      <Button 
-                        type="submit" 
-                        disabled={createBudgetItemMutation.isPending}
-                        className="bg-primary text-white hover:bg-primary/90"
-                      >
-                        Hinzufügen
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!trip.budgetItems || trip.budgetItems.length === 0 ? (
-            <div className="text-center py-8 text-slate-500">
-              <p>Noch keine Budget-Einträge vorhanden.</p>
-              <p className="text-sm">Füge deinen ersten Eintrag hinzu, um zu beginnen.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left py-3 text-sm font-medium text-slate-600">Kategorie</th>
-                    <th className="text-left py-3 text-sm font-medium text-slate-600">Unterkategorie</th>
-                    <th className="text-left py-3 text-sm font-medium text-slate-600">Menge</th>
-                    <th className="text-left py-3 text-sm font-medium text-slate-600">Preis/Einheit</th>
-                    <th className="text-left py-3 text-sm font-medium text-slate-600">Summe</th>
-                    <th className="text-left py-3 text-sm font-medium text-slate-600">Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {trip.budgetItems.map((item) => (
-                    <tr key={item.id}>
-                      <td className="py-3 text-sm text-slate-900">{item.category}</td>
-                      <td className="py-3 text-sm text-slate-600">{item.subcategory}</td>
-                      <td className="py-3 text-sm text-slate-600">{item.quantity}</td>
-                      <td className="py-3 text-sm text-slate-600">
-                        €{parseFloat(item.unitPrice || "0").toLocaleString()}
-                      </td>
-                      <td className="py-3 text-sm font-semibold text-slate-900">
-                        €{parseFloat(item.totalPrice || "0").toLocaleString()}
-                      </td>
-                      <td className="py-3">
-                        <div className="flex space-x-2">
-                          <Button size="sm" variant="ghost">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost"
-                            onClick={() => deleteBudgetItemMutation.mutate(item.id)}
-                            disabled={deleteBudgetItemMutation.isPending}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Recommendations Placeholder */}
       <Card className="border-2 border-dashed border-slate-300 bg-slate-50">

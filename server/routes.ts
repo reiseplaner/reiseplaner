@@ -142,12 +142,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/trips/:tripId/budget-items', supabaseAuth, async (req: any, res) => {
     try {
       const tripId = parseInt(req.params.tripId);
+      console.log("Received budget item data:", req.body);
+      console.log("Trip ID:", tripId);
+      
       const budgetItemData = insertBudgetItemSchema.parse({ ...req.body, tripId });
+      console.log("Parsed budget item data:", budgetItemData);
+      
       const budgetItem = await storage.createBudgetItem(budgetItemData);
+      console.log("Created budget item:", budgetItem);
+      
       res.json(budgetItem);
     } catch (error) {
       console.error("Error creating budget item:", error);
-      res.status(400).json({ message: "Invalid budget item data" });
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        res.status(400).json({ 
+          message: "Invalid budget item data", 
+          errors: error.errors 
+        });
+      } else {
+        res.status(400).json({ message: "Invalid budget item data" });
+      }
     }
   });
 
