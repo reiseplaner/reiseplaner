@@ -34,7 +34,7 @@ export default function Dashboard() {
     },
     onSuccess: (newTrip) => {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      setLocation(`/trips/${newTrip.id}`);
+      setLocation(`/trip-planning/${newTrip.id}`);
       toast({
         title: "Reise erstellt",
         description: "Deine neue Reise wurde erfolgreich erstellt.",
@@ -63,7 +63,7 @@ export default function Dashboard() {
     },
     onSuccess: (newTrip) => {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      setLocation(`/trips/${newTrip.id}`);
+      setLocation(`/trip-planning/${newTrip.id}`);
       toast({
         title: "Reise kopiert",
         description: "Die Reise wurde erfolgreich zu deinem Account hinzugefügt.",

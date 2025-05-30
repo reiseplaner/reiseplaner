@@ -73,7 +73,7 @@ export default function TripCard({ trip }: TripCardProps) {
 
   return (
     <Card className="group hover:shadow-lg transition-all duration-200 cursor-pointer">
-      <div onClick={() => setLocation(`/trips/${trip.id}`)}>
+      <div onClick={() => setLocation(`/trip-planning/${trip.id}`)}>
         <img 
           src={getDestinationImage(trip.destination || "")}
           alt="Travel destination" 
@@ -90,7 +90,7 @@ export default function TripCard({ trip }: TripCardProps) {
                 variant="ghost"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setLocation(`/trips/${trip.id}`);
+                  setLocation(`/trip-planning/${trip.id}`);
                 }}
               >
                 <Edit className="h-4 w-4" />
