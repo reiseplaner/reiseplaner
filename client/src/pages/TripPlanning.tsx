@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { ArrowLeft, Save, Share, Download } from "lucide-react";
@@ -37,6 +37,7 @@ export default function TripPlanning() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("general");
+  const isInitialLoadRef = useRef(true);
 
   const { data: trip, isLoading } = useQuery<TripWithDetails>({
     queryKey: ["/api/trips", id],
@@ -56,10 +57,11 @@ export default function TripPlanning() {
     },
   });
 
-  // Formular zurücksetzen, wenn sich trip ändert
+  // Formular zurücksetzen, wenn sich trip ändert (nur beim ersten Laden oder nach erfolgreichem Speichern)
   useEffect(() => {
-    if (trip) {
-      form.reset({
+    if (trip && isInitialLoadRef.current) {
+      console.log("Resetting form with trip data:", trip);
+      const formData = {
         name: trip.name ?? "",
         departure: trip.departure ?? "",
         destination: trip.destination ?? "",
@@ -67,37 +69,46 @@ export default function TripPlanning() {
         endDate: trip.endDate ?? "",
         travelers: trip.travelers ?? 1,
         totalBudget: trip.totalBudget !== undefined && trip.totalBudget !== null ? String(trip.totalBudget) : "",
-      });
+      };
+      console.log("Form data to set:", formData);
+      form.reset(formData);
+      isInitialLoadRef.current = false;
     }
-  }, [trip, form]);
+  }, [trip]);
 
   const updateTripMutation = useMutation({
     mutationFn: async (data: z.infer<typeof generalDataSchema>) => {
       // Transform form data to match API expectations
       const apiData = {
-        ...data,
+        name: data.name,
         departure: data.departure || null,
         destination: data.destination || null,
         startDate: data.startDate || null,
         endDate: data.endDate || null,
-        totalBudget: data.totalBudget ? parseFloat(data.totalBudget) : null,
+        travelers: data.travelers,
+        totalBudget: data.totalBudget ? data.totalBudget : null,
       };
+      
+      console.log("Sending data to API:", apiData);
       const response = await apiRequest("PUT", `/api/trips/${id}`, apiData);
       return response.json();
     },
     onSuccess: (updatedTrip) => {
-      // Formular als "sauber" markieren, damit es nicht durch useEffect zurückgesetzt wird
-      form.reset(form.getValues());
+      console.log("Trip successfully updated:", updatedTrip);
+      console.log("Current form values before reset:", form.getValues());
+      // NICHT das Formular zurücksetzen - die Werte sollen erhalten bleiben
+      // isInitialLoadRef.current = true;
       queryClient.invalidateQueries({ queryKey: ["/api/trips", id] });
       toast({
         title: "Reise gespeichert",
         description: "Deine Änderungen wurden erfolgreich gespeichert.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("Update trip error:", error);
       toast({
         title: "Fehler",
-        description: "Die Reise konnte nicht gespeichert werden.",
+        description: `Die Reise konnte nicht gespeichert werden: ${error.message}`,
         variant: "destructive",
       });
     },

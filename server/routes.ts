@@ -77,8 +77,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const tripId = parseInt(req.params.id);
+      console.log("Received trip update data:", req.body);
       const tripData = insertTripSchema.partial().parse(req.body);
+      console.log("Parsed trip data:", tripData);
       const trip = await storage.updateTrip(tripId, tripData, userId);
+      console.log("Updated trip from database:", trip);
       
       if (!trip) {
         return res.status(404).json({ message: "Trip not found" });
