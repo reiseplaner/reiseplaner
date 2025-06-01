@@ -486,12 +486,27 @@ export default function ActivityList({ trip }: ActivityListProps) {
                                 </div>
                               </td>
                               <td className="py-3 px-3">
-                                <Input
-                                  type="text"
-                                  value={form.watch("location") || ""}
-                                  onChange={(e) => form.setValue("location", e.target.value)}
-                                  className="w-full"
-                                />
+                                <div className="space-y-1">
+                                  <Input
+                                    type="text"
+                                    placeholder="z.B. Tanah Lot, Bali"
+                                    value={form.watch("location") || ""}
+                                    onChange={(e) => form.setValue("location", e.target.value)}
+                                    className="w-full"
+                                  />
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.watch("location") || "")}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1"
+                                    title="In Google Maps öffnen"
+                                  >
+                                    <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                    </svg>
+                                    in Google maps suchen
+                                  </a>
+                                </div>
                               </td>
                               <td className="py-3 px-3">
                                 <Input
@@ -584,7 +599,15 @@ export default function ActivityList({ trip }: ActivityListProps) {
                                 {activity.location ? (
                                   <div className="flex items-center gap-1">
                                     <MapPin className="h-3 w-3 text-slate-400" />
-                                    {activity.location}
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(activity.location)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                                      title="In Google Maps öffnen"
+                                    >
+                                      {activity.location}
+                                    </a>
                           </div>
                                 ) : (
                                   "-"
@@ -685,13 +708,27 @@ export default function ActivityList({ trip }: ActivityListProps) {
                             </div>
                           </td>
                           <td className="py-3 px-3">
-                            <Input
-                              type="text"
-                              placeholder="z.B. Tanah Lot, Bali"
-                              value={form.watch("location") || ""}
-                              onChange={(e) => form.setValue("location", e.target.value)}
-                              className="w-full"
-                            />
+                            <div className="space-y-1">
+                              <Input
+                                type="text"
+                                placeholder="z.B. Tanah Lot, Bali"
+                                value={form.watch("location") || ""}
+                                onChange={(e) => form.setValue("location", e.target.value)}
+                                className="w-full"
+                              />
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.watch("location") || "")}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-800 text-xs flex items-center gap-1"
+                                title="In Google Maps öffnen"
+                              >
+                                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+                                </svg>
+                                in Google maps suchen
+                              </a>
+                            </div>
                           </td>
                           <td className="py-3 px-3">
                             <Input
