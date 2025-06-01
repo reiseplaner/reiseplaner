@@ -8,6 +8,7 @@ import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import TripPlanning from "@/pages/TripPlanning";
 import Community from "@/pages/Community";
+import PublicTripDetail from "@/pages/PublicTripDetail";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -15,6 +16,9 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - accessible to everyone */}
+      <Route path="/community/:slug" component={PublicTripDetail} />
+      
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (

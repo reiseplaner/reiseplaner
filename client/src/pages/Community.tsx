@@ -1,31 +1,38 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { useLocation } from "wouter";
-import Navigation from "@/components/Navigation";
 import { apiRequest } from "@/lib/queryClient";
+import Navigation from "@/components/Navigation";
+import { Heart } from "lucide-react";
 import type { Trip } from "@shared/schema";
+
+// Extended trip type with upvote count
+type TripWithUpvotes = Trip & { upvoteCount: number };
 
 export default function Community() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: publicTrips = [], isLoading } = useQuery<Trip[]>({
+  const { data: publicTrips = [], isLoading } = useQuery({
     queryKey: ["/api/public/trips"],
-    retry: false,
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/public/trips");
+      return response.json() as Promise<TripWithUpvotes[]>;
+    },
   });
 
   const copyTripMutation = useMutation({
-    mutationFn: async (publicTrip: Trip) => {
+    mutationFn: async (publicTrip: TripWithUpvotes) => {
       const response = await apiRequest("POST", "/api/trips", {
         name: `${publicTrip.name} (Kopie)`,
         departure: publicTrip.departure,
         destination: publicTrip.destination,
-        totalBudget: publicTrip.totalBudget,
+        startDate: publicTrip.startDate,
+        endDate: publicTrip.endDate,
         travelers: publicTrip.travelers,
         description: publicTrip.description,
       });
@@ -33,7 +40,7 @@ export default function Community() {
     },
     onSuccess: (newTrip) => {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
-      setLocation(`/trips/${newTrip.id}`);
+      setLocation(`/trip-planning/${newTrip.id}`);
       toast({
         title: "Reise kopiert",
         description: "Die Reise wurde erfolgreich zu deinem Account hinzugefügt.",
@@ -57,6 +64,12 @@ export default function Community() {
       "ATH": "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Greece
     };
     return imageMap[destination || ""] || "https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200";
+  };
+
+  const handleTripClick = (trip: TripWithUpvotes) => {
+    if (trip.publicSlug) {
+      setLocation(`/community/${trip.publicSlug}`);
+    }
   };
 
   if (isLoading) {
@@ -175,7 +188,11 @@ export default function Community() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {publicTrips.map((trip) => (
-              <Card key={trip.id} className="overflow-hidden hover:shadow-md transition-shadow">
+              <Card 
+                key={trip.id} 
+                className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => handleTripClick(trip)}
+              >
                 <img 
                   src={getDestinationImage(trip.destination || "")}
                   alt="Travel destination" 
@@ -186,7 +203,7 @@ export default function Community() {
                     <h3 className="text-lg font-semibold text-slate-900">{trip.name}</h3>
                     <div className="flex items-center text-sm text-slate-500">
                       <Heart className="h-4 w-4 mr-1" />
-                      <span>0</span>
+                      <span>{trip.upvoteCount || 0}</span>
                     </div>
                   </div>
                   
@@ -209,7 +226,10 @@ export default function Community() {
                     </div>
                     <Button 
                       size="sm"
-                      onClick={() => copyTripMutation.mutate(trip)}
+                      onClick={(e) => {
+                        e.stopPropagation(); // Prevent card click when copying
+                        copyTripMutation.mutate(trip);
+                      }}
                       disabled={copyTripMutation.isPending}
                       className="bg-primary text-white hover:bg-primary/90"
                     >

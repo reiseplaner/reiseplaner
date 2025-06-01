@@ -16,6 +16,7 @@ import BudgetOverview from "@/components/BudgetOverview";
 import ActivityList from "@/components/ActivityList";
 import RestaurantList from "@/components/RestaurantList";
 import TripCalendar from "@/components/TripCalendar";
+import ShareTripDialog from "@/components/ShareTripDialog";
 import { apiRequest } from "@/lib/queryClient";
 import { exportTripToPDF, exportTripToCSV } from "@/lib/exportUtils";
 import { insertTripSchema, type TripWithDetails } from "@shared/schema";
@@ -289,6 +290,13 @@ export default function TripPlanning() {
               <Download className="h-4 w-4 mr-2" />
               CSV
             </Button>
+            <ShareTripDialog 
+              tripId={actualTrip.id} 
+              tripName={actualTrip.name}
+              isAlreadyShared={actualTrip.isPublic}
+              existingDescription={actualTrip.description || undefined}
+              publicSlug={actualTrip.publicSlug || undefined}
+            />
             <Button
               onClick={form.handleSubmit(onSubmit)}
               disabled={updateTripMutation.isPending}

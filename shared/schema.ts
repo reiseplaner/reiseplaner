@@ -94,9 +94,29 @@ export const restaurants = pgTable("restaurants", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// Trip upvotes table
+export const tripUpvotes = pgTable("trip_upvotes", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Trip comments table
+export const tripComments = pgTable("trip_comments", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   trips: many(trips),
+  tripUpvotes: many(tripUpvotes),
+  tripComments: many(tripComments),
 }));
 
 export const tripsRelations = relations(trips, ({ one, many }) => ({
@@ -107,6 +127,8 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
   budgetItems: many(budgetItems),
   activities: many(activities),
   restaurants: many(restaurants),
+  upvotes: many(tripUpvotes),
+  comments: many(tripComments),
 }));
 
 export const budgetItemsRelations = relations(budgetItems, ({ one }) => ({
@@ -127,6 +149,28 @@ export const restaurantsRelations = relations(restaurants, ({ one }) => ({
   trip: one(trips, {
     fields: [restaurants.tripId],
     references: [trips.id],
+  }),
+}));
+
+export const tripUpvotesRelations = relations(tripUpvotes, ({ one }) => ({
+  trip: one(trips, {
+    fields: [tripUpvotes.tripId],
+    references: [trips.id],
+  }),
+  user: one(users, {
+    fields: [tripUpvotes.userId],
+    references: [users.id],
+  }),
+}));
+
+export const tripCommentsRelations = relations(tripComments, ({ one }) => ({
+  trip: one(trips, {
+    fields: [tripComments.tripId],
+    references: [trips.id],
+  }),
+  user: one(users, {
+    fields: [tripComments.userId],
+    references: [users.id],
   }),
 }));
 
@@ -152,6 +196,17 @@ export const insertRestaurantSchema = createInsertSchema(restaurants).omit({
   createdAt: true,
 });
 
+export const insertTripUpvoteSchema = createInsertSchema(tripUpvotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertTripCommentSchema = createInsertSchema(tripComments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -163,10 +218,22 @@ export type InsertActivity = z.infer<typeof insertActivitySchema>;
 export type Activity = typeof activities.$inferSelect;
 export type InsertRestaurant = z.infer<typeof insertRestaurantSchema>;
 export type Restaurant = typeof restaurants.$inferSelect;
+export type InsertTripUpvote = z.infer<typeof insertTripUpvoteSchema>;
+export type TripUpvote = typeof tripUpvotes.$inferSelect;
+export type InsertTripComment = z.infer<typeof insertTripCommentSchema>;
+export type TripComment = typeof tripComments.$inferSelect;
 
 // Trip with relations type
 export type TripWithDetails = Trip & {
   budgetItems: BudgetItem[];
   activities: Activity[];
   restaurants: Restaurant[];
+};
+
+// Public trip with community features
+export type PublicTripWithDetails = TripWithDetails & {
+  upvotes: TripUpvote[];
+  comments: (TripComment & { user: User })[];
+  upvoteCount: number;
+  isUpvotedByUser?: boolean;
 };

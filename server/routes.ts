@@ -127,12 +127,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Share trip route
+  app.post('/api/trips/:id/share', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const tripId = parseInt(req.params.id);
+      const { description } = req.body;
+      
+      if (!description || description.trim().length === 0) {
+        return res.status(400).json({ message: "Beschreibung ist erforderlich" });
+      }
+      
+      // Check if trip exists and belongs to user
+      const existingTrip = await storage.getTripById(tripId, userId);
+      if (!existingTrip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      // Generate a unique public slug
+      const baseSlug = existingTrip.name
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .substring(0, 50);
+      
+      const timestamp = Date.now().toString(36);
+      const publicSlug = `${baseSlug}-${timestamp}`;
+      
+      // Update trip to make it public
+      const updatedTrip = await storage.updateTrip(tripId, {
+        isPublic: true,
+        publicSlug: publicSlug,
+        description: description.trim()
+      }, userId);
+      
+      if (!updatedTrip) {
+        return res.status(500).json({ message: "Failed to share trip" });
+      }
+      
+      res.json({ 
+        message: "Trip successfully shared with community",
+        publicSlug: publicSlug,
+        trip: updatedTrip
+      });
+    } catch (error) {
+      console.error("Error sharing trip:", error);
+      res.status(500).json({ message: "Failed to share trip" });
+    }
+  });
+
   // Public trip routes
   app.get('/api/public/trips', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
       const trips = await storage.getPublicTrips(limit);
-      res.json(trips);
+      
+      // Add upvote counts to each trip
+      const tripsWithUpvotes = await Promise.all(
+        trips.map(async (trip) => {
+          const upvoteCount = await storage.getTripUpvoteCount(trip.id);
+          return { ...trip, upvoteCount };
+        })
+      );
+      
+      res.json(tripsWithUpvotes);
     } catch (error) {
       console.error("Error fetching public trips:", error);
       res.status(500).json({ message: "Failed to fetch public trips" });
@@ -151,6 +209,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching public trip:", error);
       res.status(500).json({ message: "Failed to fetch public trip" });
+    }
+  });
+
+  // Get public trip with community features (upvotes, comments)
+  app.get('/api/public/trips/:slug/community', async (req: any, res) => {
+    try {
+      // For now, we'll get the trip without user-specific data
+      // TODO: Add optional auth support later
+      const trip = await storage.getPublicTripWithCommunityFeatures(req.params.slug);
+      
+      if (!trip) {
+        return res.status(404).json({ message: "Public trip not found" });
+      }
+      
+      res.json(trip);
+    } catch (error) {
+      console.error("Error fetching public trip with community features:", error);
+      res.status(500).json({ message: "Failed to fetch public trip" });
+    }
+  });
+
+  // Upvote/downvote trip
+  app.post('/api/public/trips/:slug/upvote', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const trip = await storage.getTripBySlug(req.params.slug);
+      
+      if (!trip) {
+        return res.status(404).json({ message: "Public trip not found" });
+      }
+
+      const hasUpvoted = await storage.hasUserUpvoted(trip.id, userId);
+      
+      if (hasUpvoted) {
+        // Remove upvote
+        await storage.removeUpvote(trip.id, userId);
+        const upvoteCount = await storage.getTripUpvoteCount(trip.id);
+        res.json({ upvoted: false, upvoteCount });
+      } else {
+        // Add upvote
+        await storage.upvoteTrip(trip.id, userId);
+        const upvoteCount = await storage.getTripUpvoteCount(trip.id);
+        res.json({ upvoted: true, upvoteCount });
+      }
+    } catch (error) {
+      console.error("Error toggling upvote:", error);
+      res.status(500).json({ message: "Failed to toggle upvote" });
+    }
+  });
+
+  // Add comment to trip
+  app.post('/api/public/trips/:slug/comments', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { content } = req.body;
+      
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ message: "Kommentar darf nicht leer sein" });
+      }
+
+      const trip = await storage.getTripBySlug(req.params.slug);
+      
+      if (!trip) {
+        return res.status(404).json({ message: "Public trip not found" });
+      }
+
+      const comment = await storage.addTripComment({
+        tripId: trip.id,
+        userId,
+        content: content.trim(),
+      });
+
+      // Get the comment with user data
+      const comments = await storage.getTripComments(trip.id);
+      const newComment = comments.find(c => c.id === comment.id);
+
+      res.json(newComment);
+    } catch (error) {
+      console.error("Error adding comment:", error);
+      res.status(500).json({ message: "Failed to add comment" });
+    }
+  });
+
+  // Delete comment
+  app.delete('/api/comments/:id', supabaseAuth, async (req: any, res) => {
+    try {
+      const commentId = parseInt(req.params.id);
+      const userId = req.user.id;
+      
+      const success = await storage.deleteTripComment(commentId, userId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Comment not found or not authorized" });
+      }
+      
+      res.json({ message: "Comment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ message: "Failed to delete comment" });
     }
   });
 

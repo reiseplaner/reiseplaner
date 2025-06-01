@@ -4,20 +4,27 @@ import {
   budgetItems,
   activities,
   restaurants,
+  tripUpvotes,
+  tripComments,
   type User,
   type UpsertUser,
   type Trip,
   type InsertTrip,
   type TripWithDetails,
+  type PublicTripWithDetails,
   type BudgetItem,
   type InsertBudgetItem,
   type Activity,
   type InsertActivity,
   type Restaurant,
   type InsertRestaurant,
+  type TripUpvote,
+  type InsertTripUpvote,
+  type TripComment,
+  type InsertTripComment,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, count, sql } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -34,6 +41,17 @@ export interface IStorage {
   // Public trip operations
   getPublicTrips(limit?: number): Promise<Trip[]>;
   getTripBySlug(slug: string): Promise<TripWithDetails | undefined>;
+  getPublicTripWithCommunityFeatures(slug: string, userId?: string): Promise<PublicTripWithDetails | undefined>;
+  
+  // Community features
+  upvoteTrip(tripId: number, userId: string): Promise<boolean>;
+  removeUpvote(tripId: number, userId: string): Promise<boolean>;
+  getTripUpvoteCount(tripId: number): Promise<number>;
+  hasUserUpvoted(tripId: number, userId: string): Promise<boolean>;
+  
+  addTripComment(comment: InsertTripComment): Promise<TripComment>;
+  getTripComments(tripId: number): Promise<(TripComment & { user: User })[]>;
+  deleteTripComment(commentId: number, userId: string): Promise<boolean>;
   
   // Budget operations
   getBudgetItemsByTripId(tripId: number): Promise<BudgetItem[]>;
@@ -191,6 +209,101 @@ export class DatabaseStorage implements IStorage {
       activities: tripActivities,
       restaurants: tripRestaurants,
     };
+  }
+
+  async getPublicTripWithCommunityFeatures(slug: string, userId?: string): Promise<PublicTripWithDetails | undefined> {
+    const trip = await this.getTripBySlug(slug);
+    if (!trip) return undefined;
+
+    const [upvoteCount, comments, isUpvotedByUser] = await Promise.all([
+      this.getTripUpvoteCount(trip.id),
+      this.getTripComments(trip.id),
+      userId ? this.hasUserUpvoted(trip.id, userId) : Promise.resolve(false),
+    ]);
+
+    return {
+      ...trip,
+      upvotes: [],
+      comments,
+      upvoteCount,
+      isUpvotedByUser,
+    };
+  }
+
+  // Community features
+  async upvoteTrip(tripId: number, userId: string): Promise<boolean> {
+    try {
+      await db.insert(tripUpvotes).values({ tripId, userId });
+      return true;
+    } catch (error: any) {
+      // Handle duplicate upvote (user already upvoted)
+      if (error.code === '23505') {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  async removeUpvote(tripId: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(tripUpvotes)
+      .where(and(eq(tripUpvotes.tripId, tripId), eq(tripUpvotes.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  async getTripUpvoteCount(tripId: number): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(tripUpvotes)
+      .where(eq(tripUpvotes.tripId, tripId));
+    return result.count;
+  }
+
+  async hasUserUpvoted(tripId: number, userId: string): Promise<boolean> {
+    const [upvote] = await db
+      .select()
+      .from(tripUpvotes)
+      .where(and(eq(tripUpvotes.tripId, tripId), eq(tripUpvotes.userId, userId)));
+    return !!upvote;
+  }
+
+  async addTripComment(comment: InsertTripComment): Promise<TripComment> {
+    const [newComment] = await db.insert(tripComments).values(comment).returning();
+    return newComment;
+  }
+
+  async getTripComments(tripId: number): Promise<(TripComment & { user: User })[]> {
+    const comments = await db
+      .select({
+        id: tripComments.id,
+        tripId: tripComments.tripId,
+        userId: tripComments.userId,
+        content: tripComments.content,
+        createdAt: tripComments.createdAt,
+        updatedAt: tripComments.updatedAt,
+        user: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        },
+      })
+      .from(tripComments)
+      .innerJoin(users, eq(tripComments.userId, users.id))
+      .where(eq(tripComments.tripId, tripId))
+      .orderBy(desc(tripComments.createdAt));
+
+    return comments;
+  }
+
+  async deleteTripComment(commentId: number, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(tripComments)
+      .where(and(eq(tripComments.id, commentId), eq(tripComments.userId, userId)));
+    return (result.rowCount ?? 0) > 0;
   }
 
   // Budget operations
