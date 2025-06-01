@@ -53,6 +53,16 @@ export default function TripPlanning() {
     enabled: !!id,
   });
 
+  console.log("🔄 Trip Objekt:", trip);
+  console.log("🔄 Trip ID:", trip?.id, "Type:", typeof trip?.id);
+  console.log("🔄 Trip ist vorhanden:", !!trip);
+  console.log("🔄 Trip ID ist vorhanden:", !!trip?.id);
+
+  // Workaround: Falls trip ein Array ist, nehme das erste Element
+  const actualTrip = Array.isArray(trip) ? trip[0] : trip;
+  console.log("🔄 Actual Trip:", actualTrip);
+  console.log("🔄 Actual Trip ID:", actualTrip?.id);
+
   const form = useForm<z.infer<typeof generalDataSchema>>({
     resolver: zodResolver(generalDataSchema),
     defaultValues: {
@@ -66,35 +76,36 @@ export default function TripPlanning() {
     },
   });
 
-  // Formular zurücksetzen, wenn sich trip ändert
+  // Formular zurücksetzen, wenn sich trip ändert (nur beim ersten Laden)
   useEffect(() => {
-    if (trip) {
-      console.log("Resetting form with trip data:", trip);
+    if (actualTrip && isInitialLoadRef.current) {
+      console.log("Resetting form with trip data:", actualTrip);
       const formData = {
-        name: trip.name ?? "",
-        departure: trip.departure ?? "",
-        destination: trip.destination ?? "",
-        startDate: trip.startDate ?? "",
-        endDate: trip.endDate ?? "",
-        travelers: trip.travelers ?? 1,
-        totalBudget: trip.totalBudget !== undefined && trip.totalBudget !== null ? String(trip.totalBudget) : "",
+        name: actualTrip.name ?? "",
+        departure: actualTrip.departure ?? "",
+        destination: actualTrip.destination ?? "",
+        startDate: actualTrip.startDate ?? "",
+        endDate: actualTrip.endDate ?? "",
+        travelers: actualTrip.travelers ?? 1,
+        totalBudget: actualTrip.totalBudget !== undefined && actualTrip.totalBudget !== null ? String(actualTrip.totalBudget) : "",
       };
       console.log("Form data to set:", formData);
       form.reset(formData);
+      isInitialLoadRef.current = false;
     }
-  }, [trip, form]);
+  }, [actualTrip]);
 
   const updateTripMutation = useMutation({
     mutationFn: async (data: z.infer<typeof generalDataSchema>) => {
       // Transform form data to match API expectations
       const apiData = {
         name: data.name,
-        departure: data.departure?.trim() || null,
-        destination: data.destination?.trim() || null,
-        startDate: data.startDate?.trim() || null,
-        endDate: data.endDate?.trim() || null,
+        departure: data.departure && data.departure.trim() ? data.departure.trim() : null,
+        destination: data.destination && data.destination.trim() ? data.destination.trim() : null,
+        startDate: data.startDate && data.startDate.trim() ? data.startDate.trim() : null,
+        endDate: data.endDate && data.endDate.trim() ? data.endDate.trim() : null,
         travelers: data.travelers,
-        totalBudget: data.totalBudget?.trim() || null,
+        totalBudget: data.totalBudget && data.totalBudget.trim() ? data.totalBudget.trim() : null,
       };
       
       console.log("Sending data to API:", apiData);
@@ -123,8 +134,8 @@ export default function TripPlanning() {
   });
 
   const handleExportPDF = () => {
-    if (trip) {
-      exportTripToPDF(trip);
+    if (actualTrip) {
+      exportTripToPDF(actualTrip);
       toast({
         title: "PDF exportiert",
         description: "Der Reiseplan wurde als PDF heruntergeladen.",
@@ -133,8 +144,8 @@ export default function TripPlanning() {
   };
 
   const handleExportCSV = () => {
-    if (trip) {
-      exportTripToCSV(trip);
+    if (actualTrip) {
+      exportTripToCSV(actualTrip);
       toast({
         title: "CSV exportiert",
         description: "Der Reiseplan wurde als CSV heruntergeladen.",
@@ -167,7 +178,7 @@ export default function TripPlanning() {
     );
   }
 
-  if (!trip) {
+  if (!actualTrip) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Navigation />
@@ -203,7 +214,7 @@ export default function TripPlanning() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">{trip.name}</h1>
+              <h1 className="text-3xl font-bold text-slate-900">{actualTrip.name}</h1>
               <p className="text-slate-600">Reiseplanung und Budget-Management</p>
             </div>
           </div>
@@ -358,22 +369,54 @@ export default function TripPlanning() {
 
           {/* Budget Tab */}
           <TabsContent value="budget">
-            <BudgetOverview trip={trip} />
+            {actualTrip ? (
+              <BudgetOverview trip={actualTrip} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-slate-600">Lade Budget-Daten...</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Activities Tab */}
           <TabsContent value="activities">
-            <ActivityList trip={trip} />
+            {actualTrip ? (
+              <ActivityList trip={actualTrip} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-slate-600">Lade Aktivitäten...</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Restaurants Tab */}
           <TabsContent value="restaurants">
-            <RestaurantList trip={trip} />
+            {actualTrip ? (
+              <RestaurantList trip={actualTrip} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-slate-600">Lade Restaurants...</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Calendar Tab */}
           <TabsContent value="calendar">
-            <TripCalendar trip={trip} />
+            {actualTrip ? (
+              <TripCalendar trip={actualTrip} />
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <p className="text-slate-600">Lade Kalender...</p>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
       </div>

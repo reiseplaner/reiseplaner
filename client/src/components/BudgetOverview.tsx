@@ -91,7 +91,6 @@ const subcategoryOptions = {
 };
 
 export default function BudgetOverview({ trip }: BudgetOverviewProps) {
-  // Alle Hooks müssen am Anfang stehen
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
@@ -113,18 +112,8 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   console.log("🔄 Trip ID:", trip.id, "Type:", typeof trip.id);
   console.log("🔄 Budget Items Anzahl:", trip.budgetItems?.length || 0);
   
-  // Validierung der Trip ID - akzeptiere sowohl number als auch string
-  if (!trip.id) {
-    console.error("❌ Trip ID ist ungültig:", trip.id);
-    return (
-      <div className="p-4 text-center text-red-600">
-        <p>Fehler: Trip ID ist ungültig. Bitte laden Sie die Seite neu.</p>
-      </div>
-    );
-  }
-  
-  // Konvertiere trip.id zu number falls es ein string ist
-  const tripId = typeof trip.id === 'string' ? parseInt(trip.id) : trip.id;
+  // Konvertiere trip.id zu number falls es ein string ist, oder verwende 0 als Fallback
+  const tripId = trip.id ? (typeof trip.id === 'string' ? parseInt(trip.id) : trip.id) : 0;
   console.log("🔄 Converted Trip ID:", tripId, "Type:", typeof tripId);
   
   const createBudgetItemMutation = useMutation({
@@ -168,14 +157,30 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       console.log("🟢 onSuccess aufgerufen mit:", newBudgetItem);
       
       // Update the cache directly with the new budget item
-      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: TripWithDetails | undefined) => {
+      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: any) => {
         if (!oldData) return oldData;
         
-        console.log("🟢 Aktualisiere Cache direkt. Alte budgetItems:", oldData.budgetItems?.length || 0);
+        console.log("🟢 Aktualisiere Cache direkt. Alte Daten:", oldData);
+        
+        // Handle both array and object structures
+        let actualTrip;
+        if (Array.isArray(oldData)) {
+          actualTrip = oldData[0];
+        } else if (oldData["0"]) {
+          // Handle the weird structure with "0" key
+          actualTrip = oldData["0"];
+        } else {
+          actualTrip = oldData;
+        }
+        
+        console.log("🟢 Actual trip data:", actualTrip);
+        console.log("🟢 Alte budgetItems:", oldData.budgetItems?.length || 0);
         
         const updatedTrip = {
-          ...oldData,
-          budgetItems: [...(oldData.budgetItems || []), newBudgetItem]
+          ...actualTrip,
+          budgetItems: [...(oldData.budgetItems || []), newBudgetItem],
+          activities: oldData.activities || [],
+          restaurants: oldData.restaurants || []
         };
         
         console.log("🟢 Neue budgetItems nach Update:", updatedTrip.budgetItems.length);
@@ -245,14 +250,26 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       console.log("🟢 Update onSuccess aufgerufen mit:", updatedBudgetItem);
       
       // Update the cache directly with the updated budget item
-      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: TripWithDetails | undefined) => {
+      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: any) => {
         if (!oldData) return oldData;
         
+        // Handle both array and object structures
+        let actualTrip;
+        if (Array.isArray(oldData)) {
+          actualTrip = oldData[0];
+        } else if (oldData["0"]) {
+          actualTrip = oldData["0"];
+        } else {
+          actualTrip = oldData;
+        }
+        
         const updatedTrip = {
-          ...oldData,
-          budgetItems: oldData.budgetItems?.map(item => 
+          ...actualTrip,
+          budgetItems: oldData.budgetItems?.map((item: BudgetItem) => 
             item.id === updatedBudgetItem.id ? updatedBudgetItem : item
-          ) || []
+          ) || [],
+          activities: oldData.activities || [],
+          restaurants: oldData.restaurants || []
         };
         
         console.log("🟢 Budget Item aktualisiert im Cache");
@@ -284,12 +301,24 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     },
     onSuccess: (deletedId) => {
       // Update the cache directly by removing the deleted item
-      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: TripWithDetails | undefined) => {
+      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: any) => {
         if (!oldData) return oldData;
         
+        // Handle both array and object structures
+        let actualTrip;
+        if (Array.isArray(oldData)) {
+          actualTrip = oldData[0];
+        } else if (oldData["0"]) {
+          actualTrip = oldData["0"];
+        } else {
+          actualTrip = oldData;
+        }
+        
         const updatedTrip = {
-          ...oldData,
-          budgetItems: oldData.budgetItems?.filter(item => item.id !== deletedId) || []
+          ...actualTrip,
+          budgetItems: oldData.budgetItems?.filter((item: BudgetItem) => item.id !== deletedId) || [],
+          activities: oldData.activities || [],
+          restaurants: oldData.restaurants || []
         };
         
         console.log("🗑️ Budget-Item gelöscht, neue Anzahl:", updatedTrip.budgetItems.length);
@@ -398,6 +427,16 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   };
 
   const summary = calculateBudgetSummary();
+
+  // Validierung der Trip ID - zeige Fehlermeldung wenn ungültig
+  if (!trip.id || tripId === 0) {
+    console.error("❌ Trip ID ist ungültig:", trip.id);
+    return (
+      <div className="p-4 text-center text-red-600">
+        <p>Fehler: Trip ID ist ungültig. Bitte laden Sie die Seite neu.</p>
+      </div>
+    );
+  }
 
   const mainCategories = [
     "Transport",
