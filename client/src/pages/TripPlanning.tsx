@@ -94,7 +94,7 @@ export default function TripPlanning() {
         startDate: data.startDate?.trim() || null,
         endDate: data.endDate?.trim() || null,
         travelers: data.travelers,
-        totalBudget: data.totalBudget?.trim() ? parseFloat(data.totalBudget.trim()) : null,
+        totalBudget: data.totalBudget?.trim() || null,
       };
       
       console.log("Sending data to API:", apiData);
