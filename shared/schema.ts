@@ -65,9 +65,11 @@ export const activities = pgTable("activities", {
   id: serial("id").primaryKey(),
   tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
   title: varchar("title").notNull(),
+  category: varchar("category"), // Kategorie wie "Outdoor & Abenteuer", "Kultur & Sehenswürdigkeiten", etc.
   location: text("location"),
   date: date("date"),
-  time: varchar("time"), // Format: "14:30"
+  timeFrom: varchar("time_from"), // Format: "14:30"
+  timeTo: varchar("time_to"), // Format: "16:30"
   price: numeric("price", { precision: 10, scale: 2 }),
   comment: text("comment"),
   bookingLink: text("booking_link"),
@@ -82,7 +84,8 @@ export const restaurants = pgTable("restaurants", {
   name: varchar("name").notNull(),
   address: text("address"),
   date: date("date"),
-  time: varchar("time"), // Format: "19:00"
+  timeFrom: varchar("time_from"), // Format: "19:00"
+  timeTo: varchar("time_to"), // Format: "21:00"
   cuisine: varchar("cuisine"),
   priceRange: varchar("price_range"), // €, €€, €€€
   reservationLink: text("reservation_link"),

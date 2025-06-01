@@ -37,6 +37,7 @@ export interface IStorage {
   
   // Budget operations
   getBudgetItemsByTripId(tripId: number): Promise<BudgetItem[]>;
+  getBudgetItemById(id: number): Promise<BudgetItem | undefined>;
   createBudgetItem(budgetItem: InsertBudgetItem): Promise<BudgetItem>;
   updateBudgetItem(id: number, budgetItem: Partial<InsertBudgetItem>): Promise<BudgetItem | undefined>;
   deleteBudgetItem(id: number): Promise<boolean>;
@@ -199,6 +200,14 @@ export class DatabaseStorage implements IStorage {
       .from(budgetItems)
       .where(eq(budgetItems.tripId, tripId))
       .orderBy(desc(budgetItems.createdAt));
+  }
+
+  async getBudgetItemById(id: number): Promise<BudgetItem | undefined> {
+    const [budgetItem] = await db
+      .select()
+      .from(budgetItems)
+      .where(eq(budgetItems.id, id));
+    return budgetItem;
   }
 
   async createBudgetItem(budgetItem: InsertBudgetItem): Promise<BudgetItem> {

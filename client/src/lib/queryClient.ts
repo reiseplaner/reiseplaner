@@ -13,8 +13,13 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
+  console.log(`🌐 API Request: ${method} ${url}`);
+  console.log(`🌐 Request Data:`, data);
+  
   // Get current session for authorization
   const { data: { session } } = await supabase.auth.getSession();
+  console.log(`🌐 Session:`, session ? 'Present' : 'Missing');
+  console.log(`🌐 Access Token:`, session?.access_token ? 'Present' : 'Missing');
   
   const headers: Record<string, string> = {
     ...(data ? { "Content-Type": "application/json" } : {}),
@@ -24,6 +29,8 @@ export async function apiRequest(
     headers.Authorization = `Bearer ${session.access_token}`;
   }
 
+  console.log(`🌐 Request Headers:`, headers);
+
   const res = await fetch(url, {
     method,
     headers,
@@ -31,6 +38,21 @@ export async function apiRequest(
     credentials: "include",
   });
 
+  console.log(`🌐 Response Status: ${res.status} ${res.statusText}`);
+  
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`🔴 API Error Response:`, errorText);
+    // Re-create response for throwIfResNotOk
+    const errorResponse = new Response(errorText, {
+      status: res.status,
+      statusText: res.statusText,
+      headers: res.headers
+    });
+    await throwIfResNotOk(errorResponse);
+  }
+
+  console.log(`🌐 Response OK`);
   await throwIfResNotOk(res);
   return res;
 }

@@ -36,7 +36,16 @@ export default function TripPlanning() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = useState("general");
+  
+  console.log("🔄 TripPlanning Komponente gerendert, Trip ID:", id);
+  console.log("🔄 Aktuelle Zeit:", new Date().toISOString());
+
+  const [activeTab, setActiveTab] = useState(() => {
+    // Versuche den aktiven Tab aus localStorage zu laden
+    const savedTab = localStorage.getItem(`trip-${id}-active-tab`);
+    console.log("🔄 Lade gespeicherten Tab:", savedTab);
+    return savedTab || "general";
+  });
   const isInitialLoadRef = useRef(true);
 
   const { data: trip, isLoading } = useQuery<TripWithDetails>({
@@ -57,9 +66,9 @@ export default function TripPlanning() {
     },
   });
 
-  // Formular zurücksetzen, wenn sich trip ändert (nur beim ersten Laden oder nach erfolgreichem Speichern)
+  // Formular zurücksetzen, wenn sich trip ändert
   useEffect(() => {
-    if (trip && isInitialLoadRef.current) {
+    if (trip) {
       console.log("Resetting form with trip data:", trip);
       const formData = {
         name: trip.name ?? "",
@@ -72,21 +81,20 @@ export default function TripPlanning() {
       };
       console.log("Form data to set:", formData);
       form.reset(formData);
-      isInitialLoadRef.current = false;
     }
-  }, [trip]);
+  }, [trip, form]);
 
   const updateTripMutation = useMutation({
     mutationFn: async (data: z.infer<typeof generalDataSchema>) => {
       // Transform form data to match API expectations
       const apiData = {
         name: data.name,
-        departure: data.departure || null,
-        destination: data.destination || null,
-        startDate: data.startDate || null,
-        endDate: data.endDate || null,
+        departure: data.departure?.trim() || null,
+        destination: data.destination?.trim() || null,
+        startDate: data.startDate?.trim() || null,
+        endDate: data.endDate?.trim() || null,
         travelers: data.travelers,
-        totalBudget: data.totalBudget ? data.totalBudget : null,
+        totalBudget: data.totalBudget?.trim() ? parseFloat(data.totalBudget.trim()) : null,
       };
       
       console.log("Sending data to API:", apiData);
@@ -95,20 +103,9 @@ export default function TripPlanning() {
     },
     onSuccess: (updatedTrip) => {
       console.log("Trip successfully updated:", updatedTrip);
-      console.log("Current form values before reset:", form.getValues());
       
-      // Update cache directly to preserve budget items and other relations
-      queryClient.setQueryData(["/api/trips", id], (oldData: TripWithDetails | undefined) => {
-        if (!oldData) return updatedTrip;
-        
-        // Merge the updated trip data with existing relations
-        return {
-          ...updatedTrip,
-          budgetItems: oldData.budgetItems || [],
-          activities: oldData.activities || [],
-          restaurants: oldData.restaurants || [],
-        };
-      });
+      // Force cache refresh to get updated data
+      queryClient.invalidateQueries({ queryKey: ["/api/trips", id] });
       
       toast({
         title: "Reise gespeichert",
@@ -147,6 +144,13 @@ export default function TripPlanning() {
 
   const onSubmit = (data: z.infer<typeof generalDataSchema>) => {
     updateTripMutation.mutate(data);
+  };
+
+  // Speichere den aktiven Tab im localStorage
+  const handleTabChange = (newTab: string) => {
+    console.log("🔄 Tab-Wechsel von", activeTab, "zu", newTab);
+    setActiveTab(newTab);
+    localStorage.setItem(`trip-${id}-active-tab`, newTab);
   };
 
   if (isLoading) {
@@ -224,7 +228,7 @@ export default function TripPlanning() {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">Allgemeine Daten</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
@@ -354,7 +358,7 @@ export default function TripPlanning() {
 
           {/* Budget Tab */}
           <TabsContent value="budget">
-            <BudgetOverview trip={Array.isArray(trip) ? trip[0] : trip} />
+            <BudgetOverview trip={trip} />
           </TabsContent>
 
           {/* Activities Tab */}

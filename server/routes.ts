@@ -142,44 +142,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/trips/:tripId/budget-items', supabaseAuth, async (req: any, res) => {
     try {
       const tripId = parseInt(req.params.tripId);
-      console.log("Received budget item data:", req.body);
-      console.log("Trip ID:", tripId);
+      const userId = req.user.id;
+      
+      console.log("🔵 Create Budget Item Request:");
+      console.log("🔵 Trip ID:", tripId, "Type:", typeof tripId);
+      console.log("🔵 User ID:", userId);
+      console.log("🔵 Request Body:", req.body);
+      
+      // Validiere tripId
+      if (isNaN(tripId)) {
+        console.log("🔴 Invalid trip ID:", req.params.tripId);
+        return res.status(400).json({ message: "Invalid trip ID" });
+      }
+      
+      // Prüfen, ob die Reise existiert und dem Benutzer gehört
+      const trip = await storage.getTripById(tripId, userId);
+      if (!trip) {
+        console.log("🔴 Trip not found or user not authorized:", tripId);
+        return res.status(404).json({ message: "Trip not found or not authorized" });
+      }
       
       const budgetItemData = insertBudgetItemSchema.parse({ ...req.body, tripId });
-      console.log("Parsed budget item data:", budgetItemData);
+      console.log("🔵 Parsed budget item data:", budgetItemData);
       
       const budgetItem = await storage.createBudgetItem(budgetItemData);
-      console.log("Created budget item:", budgetItem);
+      console.log("🟢 Created budget item:", budgetItem);
       
       res.json(budgetItem);
     } catch (error) {
-      console.error("Error creating budget item:", error);
+      console.error("🔴 Error creating budget item:", error);
       if (error instanceof z.ZodError) {
-        console.error("Validation errors:", error.errors);
+        console.error("🔴 Validation errors:", error.errors);
         res.status(400).json({ 
           message: "Invalid budget item data", 
           errors: error.errors 
         });
       } else {
-        res.status(400).json({ message: "Invalid budget item data" });
+        res.status(500).json({ message: "Internal server error" });
       }
     }
   });
 
-  app.put('/api/budget-items/:id', supabaseAuth, async (req, res) => {
+  app.put('/api/budget-items/:id', supabaseAuth, async (req: any, res) => {
     try {
       const budgetItemId = parseInt(req.params.id);
-      const budgetItemData = insertBudgetItemSchema.partial().parse(req.body);
-      const budgetItem = await storage.updateBudgetItem(budgetItemId, budgetItemData);
+      const userId = req.user.id;
       
-      if (!budgetItem) {
+      console.log("🔵 Update Budget Item Request:");
+      console.log("🔵 Budget Item ID:", budgetItemId);
+      console.log("🔵 User ID:", userId);
+      console.log("🔵 Request Body:", req.body);
+      
+      // Erst prüfen, ob das Budget-Item existiert und dem Benutzer gehört
+      const existingItem = await storage.getBudgetItemById(budgetItemId);
+      if (!existingItem) {
+        console.log("🔴 Budget item not found:", budgetItemId);
         return res.status(404).json({ message: "Budget item not found" });
       }
       
+      // Prüfen, ob das Budget-Item zu einer Reise des Benutzers gehört
+      const trip = await storage.getTripById(existingItem.tripId, userId);
+      if (!trip) {
+        console.log("🔴 User not authorized to update this budget item");
+        return res.status(403).json({ message: "Not authorized to update this budget item" });
+      }
+      
+      const budgetItemData = insertBudgetItemSchema.partial().parse(req.body);
+      console.log("🔵 Parsed budget item data:", budgetItemData);
+      
+      const budgetItem = await storage.updateBudgetItem(budgetItemId, budgetItemData);
+      
+      if (!budgetItem) {
+        console.log("🔴 Failed to update budget item");
+        return res.status(500).json({ message: "Failed to update budget item" });
+      }
+      
+      console.log("🟢 Budget item updated successfully:", budgetItem);
       res.json(budgetItem);
     } catch (error) {
-      console.error("Error updating budget item:", error);
-      res.status(400).json({ message: "Invalid budget item data" });
+      console.error("🔴 Error updating budget item:", error);
+      if (error instanceof z.ZodError) {
+        console.error("🔴 Validation errors:", error.errors);
+        res.status(400).json({ 
+          message: "Invalid budget item data", 
+          errors: error.errors 
+        });
+      } else {
+        res.status(500).json({ message: "Internal server error" });
+      }
     }
   });
 
@@ -203,12 +253,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/trips/:tripId/activities', supabaseAuth, async (req: any, res) => {
     try {
       const tripId = parseInt(req.params.tripId);
+      console.log("Received activity data:", req.body);
+      console.log("Trip ID:", tripId);
+      
       const activityData = insertActivitySchema.parse({ ...req.body, tripId });
+      console.log("Parsed activity data:", activityData);
+      
       const activity = await storage.createActivity(activityData);
+      console.log("Created activity:", activity);
+      
       res.json(activity);
     } catch (error) {
       console.error("Error creating activity:", error);
+      if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
+        res.status(400).json({ 
+          message: "Invalid activity data", 
+          errors: error.errors 
+        });
+      } else {
       res.status(400).json({ message: "Invalid activity data" });
+      }
     }
   });
 
@@ -289,6 +354,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error deleting restaurant:", error);
       res.status(500).json({ message: "Failed to delete restaurant" });
     }
+  });
+
+  // Health check
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // Auth test route
+  app.get('/api/auth/test', supabaseAuth, async (req: any, res) => {
+    res.json({ 
+      message: 'Authenticated successfully', 
+      user: {
+        id: req.user.id,
+        email: req.user.email
+      }
+    });
   });
 
   const httpServer = createServer(app);

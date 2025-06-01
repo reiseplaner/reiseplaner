@@ -41,14 +41,21 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
       if (activity.date) {
         const activityDate = new Date(activity.date);
         
-        // Parse time if available, otherwise use default time
+        // Parse timeFrom and timeTo if available, otherwise use default time
         let startTime = new Date(activityDate);
         let endTime = new Date(activityDate);
         
-        if (activity.time) {
-          const [hours, minutes] = activity.time.split(':').map(Number);
+        if (activity.timeFrom) {
+          const [hours, minutes] = activity.timeFrom.split(':').map(Number);
           startTime.setHours(hours, minutes, 0, 0);
-          endTime.setHours(hours + 2, minutes, 0, 0); // Default 2-hour duration
+          
+          if (activity.timeTo) {
+            const [endHours, endMinutes] = activity.timeTo.split(':').map(Number);
+            endTime.setHours(endHours, endMinutes, 0, 0);
+          } else {
+            // If only timeFrom is set, default to 2-hour duration
+            endTime.setHours(hours + 2, minutes, 0, 0);
+          }
         } else {
           startTime.setHours(10, 0, 0, 0); // Default start at 10:00
           endTime.setHours(12, 0, 0, 0); // Default end at 12:00
@@ -74,10 +81,17 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
         let startTime = new Date(restaurantDate);
         let endTime = new Date(restaurantDate);
         
-        if (restaurant.time) {
-          const [hours, minutes] = restaurant.time.split(':').map(Number);
+        if (restaurant.timeFrom) {
+          const [hours, minutes] = restaurant.timeFrom.split(':').map(Number);
           startTime.setHours(hours, minutes, 0, 0);
-          endTime.setHours(hours + 2, minutes, 0, 0); // Default 2-hour duration
+          
+          if (restaurant.timeTo) {
+            const [endHours, endMinutes] = restaurant.timeTo.split(':').map(Number);
+            endTime.setHours(endHours, endMinutes, 0, 0);
+          } else {
+            // If only timeFrom is set, default to 2-hour duration
+            endTime.setHours(hours + 2, minutes, 0, 0);
+          }
         } else {
           startTime.setHours(19, 0, 0, 0); // Default dinner time at 19:00
           endTime.setHours(21, 0, 0, 0); // Default end at 21:00

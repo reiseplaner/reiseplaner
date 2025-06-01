@@ -107,7 +107,13 @@ export function exportTripToPDF(trip: TripWithDetails) {
         
         if (activity.date) {
           const dateStr = new Date(activity.date).toLocaleDateString('de-DE');
-          const timeStr = activity.time ? ` um ${activity.time}` : '';
+          let timeStr = '';
+          if (activity.timeFrom) {
+            timeStr = activity.timeFrom;
+            if (activity.timeTo) {
+              timeStr += ` - ${activity.timeTo}`;
+            }
+          }
           yPosition = addText(`  Datum: ${dateStr}${timeStr}`, margin, yPosition);
         }
         
@@ -152,7 +158,13 @@ export function exportTripToPDF(trip: TripWithDetails) {
         
         if (restaurant.date) {
           const dateStr = new Date(restaurant.date).toLocaleDateString('de-DE');
-          const timeStr = restaurant.time ? ` um ${restaurant.time}` : '';
+          let timeStr = '';
+          if (restaurant.timeFrom) {
+            timeStr = ` von ${restaurant.timeFrom}`;
+            if (restaurant.timeTo) {
+              timeStr += ` bis ${restaurant.timeTo}`;
+            }
+          }
           yPosition = addText(`  Datum: ${dateStr}${timeStr}`, margin, yPosition);
         }
         
@@ -224,12 +236,20 @@ export function exportTripToCSV(trip: TripWithDetails) {
 
     // Activities
     trip.activities.forEach((activity) => {
+      let timeStr = '';
+      if (activity.timeFrom) {
+        timeStr = activity.timeFrom;
+        if (activity.timeTo) {
+          timeStr += ` - ${activity.timeTo}`;
+        }
+      }
+      
       csvData.push({
         Typ: 'Aktivität',
         Name: activity.title,
         Kategorie: 'Aktivität',
         Datum: activity.date ? new Date(activity.date).toLocaleDateString('de-DE') : '',
-        Zeit: activity.time || '',
+        Zeit: timeStr,
         Ort: activity.location || '',
         Preis: activity.price ? `€${parseFloat(activity.price).toLocaleString()}` : '',
         Status: activity.status || 'geplant',
@@ -240,12 +260,20 @@ export function exportTripToCSV(trip: TripWithDetails) {
 
     // Restaurants
     trip.restaurants.forEach((restaurant) => {
+      let timeStr = '';
+      if (restaurant.timeFrom) {
+        timeStr = restaurant.timeFrom;
+        if (restaurant.timeTo) {
+          timeStr += ` - ${restaurant.timeTo}`;
+        }
+      }
+      
       csvData.push({
         Typ: 'Restaurant',
         Name: restaurant.name,
         Kategorie: restaurant.cuisine || 'Restaurant',
         Datum: restaurant.date ? new Date(restaurant.date).toLocaleDateString('de-DE') : '',
-        Zeit: restaurant.time || '',
+        Zeit: timeStr,
         Ort: restaurant.address || '',
         Preis: restaurant.priceRange || '',
         Status: restaurant.status || 'geplant',

@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { apiRequest } from "@/lib/queryClient";
 import { insertBudgetItemSchema, type TripWithDetails, type BudgetItem } from "@shared/schema";
 import { z } from "zod";
+import { supabase } from "@/lib/supabase";
 
 interface BudgetOverviewProps {
   trip: TripWithDetails;
@@ -90,9 +91,7 @@ const subcategoryOptions = {
 };
 
 export default function BudgetOverview({ trip }: BudgetOverviewProps) {
-  console.log("🔄 BudgetOverview re-rendered mit trip:", trip);
-  console.log("🔄 Budget Items Anzahl:", trip.budgetItems?.length || 0);
-  
+  // Alle Hooks müssen am Anfang stehen
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
@@ -110,16 +109,42 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     },
   });
 
+  console.log("🔄 BudgetOverview re-rendered mit trip:", trip);
+  console.log("🔄 Trip ID:", trip.id, "Type:", typeof trip.id);
+  console.log("🔄 Budget Items Anzahl:", trip.budgetItems?.length || 0);
+  
+  // Validierung der Trip ID - akzeptiere sowohl number als auch string
+  if (!trip.id) {
+    console.error("❌ Trip ID ist ungültig:", trip.id);
+    return (
+      <div className="p-4 text-center text-red-600">
+        <p>Fehler: Trip ID ist ungültig. Bitte laden Sie die Seite neu.</p>
+      </div>
+    );
+  }
+  
+  // Konvertiere trip.id zu number falls es ein string ist
+  const tripId = typeof trip.id === 'string' ? parseInt(trip.id) : trip.id;
+  console.log("🔄 Converted Trip ID:", tripId, "Type:", typeof tripId);
+  
   const createBudgetItemMutation = useMutation({
     mutationFn: async (data: z.infer<typeof budgetItemFormSchema>) => {
+      console.log("🔵 createBudgetItemMutation.mutationFn gestartet");
       console.log("🔵 Mutation gestartet mit Form-Daten:", data);
+      
+      // Überprüfe Supabase-Session vor API-Aufruf
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error("🔴 Keine Supabase-Session gefunden!");
+        throw new Error("Sie sind nicht angemeldet. Bitte laden Sie die Seite neu und melden Sie sich erneut an.");
+      }
       
       const unitPrice = parseFloat(data.unitPrice);
       const totalPrice = unitPrice * (data.quantity || 1);
       
       // Clean up the data before sending
       const cleanData = {
-        tripId: trip.id,
+        tripId: tripId,
         category: data.category,
         subcategory: data.subcategory || null,
         quantity: data.quantity || 1,
@@ -130,9 +155,9 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       };
       
       console.log("🔵 Daten, die gespeichert werden:", cleanData);
-      console.log("🔵 API-URL:", `/api/trips/${trip.id}/budget-items`);
+      console.log("🔵 API-URL:", `/api/trips/${tripId}/budget-items`);
       
-      const response = await apiRequest("POST", `/api/trips/${trip.id}/budget-items`, cleanData);
+      const response = await apiRequest("POST", `/api/trips/${tripId}/budget-items`, cleanData);
       const result = await response.json();
       
       console.log("🔵 Backend-Antwort (newBudgetItem):", result);
@@ -143,7 +168,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       console.log("🟢 onSuccess aufgerufen mit:", newBudgetItem);
       
       // Update the cache directly with the new budget item
-      queryClient.setQueryData(["/api/trips", trip.id.toString()], (oldData: TripWithDetails | undefined) => {
+      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: TripWithDetails | undefined) => {
         if (!oldData) return oldData;
         
         console.log("🟢 Aktualisiere Cache direkt. Alte budgetItems:", oldData.budgetItems?.length || 0);
@@ -168,9 +193,85 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     },
     onError: (error) => {
       console.error("🔴 Error creating budget item:", error);
+      
+      let errorMessage = "Der Budget-Eintrag konnte nicht erstellt werden.";
+      
+      if (error.message.includes("nicht angemeldet")) {
+        errorMessage = "Sie sind nicht angemeldet. Bitte laden Sie die Seite neu.";
+      } else if (error.message.includes("401")) {
+        errorMessage = "Ihre Sitzung ist abgelaufen. Bitte laden Sie die Seite neu.";
+      } else if (error.message.includes("403")) {
+        errorMessage = "Sie haben keine Berechtigung für diese Aktion.";
+      } else if (error.message.includes("404")) {
+        errorMessage = "Die Reise wurde nicht gefunden.";
+      }
+      
       toast({
         title: "Fehler",
-        description: "Der Budget-Eintrag konnte nicht erstellt werden.",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBudgetItemMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof budgetItemFormSchema> }) => {
+      console.log("🔵 Update Budget Item Mutation gestartet mit:", { id, data });
+      
+      const unitPrice = parseFloat(data.unitPrice);
+      const totalPrice = unitPrice * (data.quantity || 1);
+      
+      // Clean up the data before sending
+      const cleanData = {
+        category: data.category,
+        subcategory: data.subcategory || null,
+        quantity: data.quantity || 1,
+        unitPrice: unitPrice.toString(),
+        totalPrice: totalPrice.toString(),
+        comment: data.comment || null,
+        affiliateLink: data.affiliateLink || null,
+      };
+      
+      console.log("🔵 Update-Daten, die gespeichert werden:", cleanData);
+      
+      const response = await apiRequest("PUT", `/api/budget-items/${id}`, cleanData);
+      const result = await response.json();
+      
+      console.log("🔵 Backend-Antwort (updatedBudgetItem):", result);
+      
+      return result;
+    },
+    onSuccess: (updatedBudgetItem) => {
+      console.log("🟢 Update onSuccess aufgerufen mit:", updatedBudgetItem);
+      
+      // Update the cache directly with the updated budget item
+      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: TripWithDetails | undefined) => {
+        if (!oldData) return oldData;
+        
+        const updatedTrip = {
+          ...oldData,
+          budgetItems: oldData.budgetItems?.map(item => 
+            item.id === updatedBudgetItem.id ? updatedBudgetItem : item
+          ) || []
+        };
+        
+        console.log("🟢 Budget Item aktualisiert im Cache");
+        return updatedTrip;
+      });
+      
+      setEditingItem(null);
+      form.reset();
+      
+      toast({
+        title: "Budget-Eintrag aktualisiert",
+        description: "Der Budget-Eintrag wurde erfolgreich aktualisiert.",
+      });
+    },
+    onError: (error) => {
+      console.error("🔴 Error updating budget item:", error);
+      toast({
+        title: "Fehler",
+        description: "Der Budget-Eintrag konnte nicht aktualisiert werden.",
         variant: "destructive",
       });
     },
@@ -183,7 +284,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     },
     onSuccess: (deletedId) => {
       // Update the cache directly by removing the deleted item
-      queryClient.setQueryData(["/api/trips", trip.id.toString()], (oldData: TripWithDetails | undefined) => {
+      queryClient.setQueryData(["/api/trips", tripId.toString()], (oldData: TripWithDetails | undefined) => {
         if (!oldData) return oldData;
         
         const updatedTrip = {
@@ -210,11 +311,14 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   });
 
   const onSubmit = (data: z.infer<typeof budgetItemFormSchema>) => {
+    console.log("🔵 onSubmit aufgerufen mit Daten:", data);
+    console.log("🔵 createBudgetItemMutation.isPending:", createBudgetItemMutation.isPending);
     createBudgetItemMutation.mutate(data);
   };
 
   const handleAddNew = (category: string) => {
     setAddingToCategory(category);
+    setEditingItem(null); // Schließe Edit-Modus falls offen
     form.reset({
       category,
       subcategory: "",
@@ -228,6 +332,36 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   const handleCancelAdd = () => {
     setAddingToCategory(null);
     form.reset();
+  };
+
+  const handleEditItem = (item: BudgetItem) => {
+    setEditingItem(item);
+    setAddingToCategory(null); // Schließe Add-Modus falls offen
+    
+    // Fülle das Formular mit den aktuellen Werten
+    form.reset({
+      category: item.category,
+      subcategory: item.subcategory || "",
+      quantity: item.quantity || 1,
+      unitPrice: item.unitPrice || "",
+      comment: item.comment || "",
+      affiliateLink: item.affiliateLink || "",
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingItem(null);
+    form.reset();
+  };
+
+  const handleUpdateItem = () => {
+    if (!editingItem) return;
+    
+    const formData = form.getValues();
+    updateBudgetItemMutation.mutate({
+      id: editingItem.id,
+      data: formData
+    });
   };
 
   const calculateBudgetSummary = () => {
@@ -364,7 +498,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                       size="sm" 
                       variant="outline"
                       onClick={() => handleAddNew(category)}
-                      disabled={addingToCategory !== null}
+                      disabled={addingToCategory !== null || editingItem !== null}
                       className="text-xs"
                     >
                       <Plus className="h-3 w-3 mr-1" />
@@ -405,52 +539,144 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                       {/* Existing items */}
                       {categoryItems.map((item) => (
                         <tr key={item.id} className="hover:bg-slate-50">
-                          <td className="py-3 px-3 text-sm text-slate-900 font-medium">
-                            {item.subcategory || "-"}
-                          </td>
-                          <td className="py-3 px-3 text-sm text-slate-600">
-                            €{parseFloat(item.unitPrice || "0").toLocaleString()}
-                          </td>
-                          <td className="py-3 px-3 text-sm text-slate-600">
-                            {item.quantity}x
-                          </td>
-                          <td className="py-3 px-3 text-sm font-semibold text-slate-900">
-                            €{parseFloat(item.totalPrice || "0").toLocaleString()}
-                          </td>
-                          <td className="py-3 px-3 text-sm text-slate-600 max-w-xs truncate">
-                            {item.comment || "-"}
-                          </td>
-                          <td className="py-3 px-3 text-sm">
-                            {item.affiliateLink ? (
-                              <a 
-                                href={item.affiliateLink} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Link
-                              </a>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
-                          </td>
-                          <td className="py-3 px-3">
-                            <div className="flex space-x-1">
-                              <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
-                                <Edit className="h-3 w-3" />
-                              </Button>
-                              <Button 
-                                size="sm" 
-                                variant="ghost"
-                                onClick={() => deleteBudgetItemMutation.mutate(item.id)}
-                                disabled={deleteBudgetItemMutation.isPending}
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </td>
+                          {editingItem?.id === item.id ? (
+                            // Edit mode row
+                            <>
+                              <td className="py-3 px-3">
+                                <Select 
+                                  value={form.watch("subcategory") || ""} 
+                                  onValueChange={(value) => form.setValue("subcategory", value)}
+                                >
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Unterkategorie wählen" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {subcategoryOptions[category as keyof typeof subcategoryOptions]?.map((option) => (
+                                      <SelectItem key={option} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </td>
+                              <td className="py-3 px-3">
+                                <Input
+                                  type="text"
+                                  placeholder="0.00"
+                                  value={form.watch("unitPrice") || ""}
+                                  onChange={(e) => form.setValue("unitPrice", e.target.value)}
+                                  className="w-full"
+                                />
+                              </td>
+                              <td className="py-3 px-3">
+                                <Input
+                                  type="number"
+                                  value={form.watch("quantity") || 1}
+                                  onChange={(e) => form.setValue("quantity", parseInt(e.target.value) || 1)}
+                                  className="w-full"
+                                  min="1"
+                                />
+                              </td>
+                              <td className="py-3 px-3 text-sm font-semibold text-slate-900">
+                                €{((parseFloat(form.watch("unitPrice") || "0")) * (form.watch("quantity") || 1)).toLocaleString()}
+                              </td>
+                              <td className="py-3 px-3">
+                                <Input
+                                  type="text"
+                                  placeholder="Kommentar..."
+                                  value={form.watch("comment") || ""}
+                                  onChange={(e) => form.setValue("comment", e.target.value)}
+                                  className="w-full"
+                                />
+                              </td>
+                              <td className="py-3 px-3">
+                                <Input
+                                  type="text"
+                                  placeholder="https://..."
+                                  value={form.watch("affiliateLink") || ""}
+                                  onChange={(e) => form.setValue("affiliateLink", e.target.value)}
+                                  className="w-full"
+                                />
+                              </td>
+                              <td className="py-3 px-3">
+                                <div className="flex space-x-1">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={handleUpdateItem}
+                                    disabled={updateBudgetItemMutation.isPending}
+                                  >
+                                    <Check className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={handleCancelEdit}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </>
+                          ) : (
+                            // Normal display mode
+                            <>
+                              <td className="py-3 px-3 text-sm text-slate-900 font-medium">
+                                {item.subcategory || "-"}
+                              </td>
+                              <td className="py-3 px-3 text-sm text-slate-600">
+                                €{parseFloat(item.unitPrice || "0").toLocaleString()}
+                              </td>
+                              <td className="py-3 px-3 text-sm text-slate-600">
+                                {item.quantity}x
+                              </td>
+                              <td className="py-3 px-3 text-sm font-semibold text-slate-900">
+                                €{parseFloat(item.totalPrice || "0").toLocaleString()}
+                              </td>
+                              <td className="py-3 px-3 text-sm text-slate-600 max-w-xs truncate">
+                                {item.comment || "-"}
+                              </td>
+                              <td className="py-3 px-3 text-sm">
+                                {item.affiliateLink ? (
+                                  <a 
+                                    href={item.affiliateLink} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                                  >
+                                    <ExternalLink className="h-3 w-3" />
+                                    Link
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-400">-</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3">
+                                <div className="flex space-x-1">
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => handleEditItem(item)}
+                                    disabled={editingItem !== null || addingToCategory !== null}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost"
+                                    onClick={() => deleteBudgetItemMutation.mutate(item.id)}
+                                    disabled={deleteBudgetItemMutation.isPending}
+                                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </>
+                          )}
                         </tr>
                       ))}
                       
@@ -520,7 +746,9 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                                 variant="ghost" 
                                 className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
                                 onClick={() => {
+                                  console.log("🔵 Submit-Button geklickt");
                                   const formData = form.getValues();
+                                  console.log("🔵 Form-Daten vom Button:", formData);
                                   onSubmit(formData);
                                 }}
                                 disabled={createBudgetItemMutation.isPending}
