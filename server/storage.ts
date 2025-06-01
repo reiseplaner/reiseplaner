@@ -195,11 +195,18 @@ export class DatabaseStorage implements IStorage {
 
   // Budget operations
   async getBudgetItemsByTripId(tripId: number): Promise<BudgetItem[]> {
-    return await db
+    console.log("🔍 getBudgetItemsByTripId called with tripId:", tripId);
+    
+    const items = await db
       .select()
       .from(budgetItems)
       .where(eq(budgetItems.tripId, tripId))
       .orderBy(desc(budgetItems.createdAt));
+    
+    console.log("🔍 Budget items found:", items.length);
+    console.log("🔍 Budget items:", items);
+    
+    return items;
   }
 
   async getBudgetItemById(id: number): Promise<BudgetItem | undefined> {
@@ -211,7 +218,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBudgetItem(budgetItem: InsertBudgetItem): Promise<BudgetItem> {
+    console.log("🔍 createBudgetItem called with data:", budgetItem);
+    
     const [newBudgetItem] = await db.insert(budgetItems).values(budgetItem).returning();
+    
+    console.log("🔍 Budget item created in database:", newBudgetItem);
+    
     return newBudgetItem;
   }
 

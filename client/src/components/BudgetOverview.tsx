@@ -145,6 +145,11 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
       
       console.log("🔵 Daten, die gespeichert werden:", cleanData);
       console.log("🔵 API-URL:", `/api/trips/${tripId}/budget-items`);
+      console.log("🔵 Trip ID für API-Call:", tripId, "Type:", typeof tripId);
+      
+      if (tripId === 0) {
+        throw new Error("Trip ID ist 0 - kann nicht speichern");
+      }
       
       const response = await apiRequest("POST", `/api/trips/${tripId}/budget-items`, cleanData);
       const result = await response.json();

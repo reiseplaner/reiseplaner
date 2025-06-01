@@ -50,8 +50,25 @@ export default function TripPlanning() {
 
   const { data: trip, isLoading } = useQuery<TripWithDetails>({
     queryKey: ["/api/trips", id],
+    queryFn: async () => {
+      console.log("🔄 useQuery queryFn wird ausgeführt für Trip ID:", id);
+      const response = await apiRequest("GET", `/api/trips/${id}`);
+      const data = await response.json();
+      console.log("🔄 useQuery queryFn Antwort:", data);
+      return data;
+    },
     enabled: !!id,
   });
+
+  // Log trip data when it changes
+  useEffect(() => {
+    if (trip) {
+      console.log("🔄 Trip-Daten vom Server geladen:", trip);
+      console.log("🔄 Budget Items vom Server:", trip?.budgetItems?.length || 0);
+      console.log("🔄 Activities vom Server:", trip?.activities?.length || 0);
+      console.log("🔄 Restaurants vom Server:", trip?.restaurants?.length || 0);
+    }
+  }, [trip]);
 
   console.log("🔄 Trip Objekt:", trip);
   console.log("🔄 Trip ID:", trip?.id, "Type:", typeof trip?.id);
@@ -112,7 +129,7 @@ export default function TripPlanning() {
       const response = await apiRequest("PUT", `/api/trips/${id}`, apiData);
       return response.json();
     },
-    onSuccess: (updatedTrip) => {
+    onSuccess: (updatedTrip: any) => {
       console.log("Trip successfully updated:", updatedTrip);
       
       // Aktualisiere den Cache intelligent, ohne die Budget-Items zu verlieren
@@ -122,7 +139,7 @@ export default function TripPlanning() {
         console.log("🔄 Alte Cache-Daten vor Trip-Update:", oldData);
         
         // Handle both array and object structures
-        let actualOldTrip;
+        let actualOldTrip: any;
         if (Array.isArray(oldData)) {
           actualOldTrip = oldData[0];
         } else if (oldData["0"]) {
@@ -132,15 +149,34 @@ export default function TripPlanning() {
         }
         
         // Merge the updated trip data with existing budget items, activities, restaurants
+        // Nur die Trip-Grunddaten übernehmen, Arrays beibehalten
         const mergedTrip = {
           ...actualOldTrip,
-          ...updatedTrip,
+          // Nur die Trip-Grunddaten vom Update übernehmen
+          id: updatedTrip.id || actualOldTrip.id,
+          userId: updatedTrip.userId || actualOldTrip.userId,
+          name: updatedTrip.name || actualOldTrip.name,
+          departure: updatedTrip.departure !== undefined ? updatedTrip.departure : actualOldTrip.departure,
+          destination: updatedTrip.destination !== undefined ? updatedTrip.destination : actualOldTrip.destination,
+          startDate: updatedTrip.startDate !== undefined ? updatedTrip.startDate : actualOldTrip.startDate,
+          endDate: updatedTrip.endDate !== undefined ? updatedTrip.endDate : actualOldTrip.endDate,
+          travelers: updatedTrip.travelers || actualOldTrip.travelers,
+          totalBudget: updatedTrip.totalBudget !== undefined ? updatedTrip.totalBudget : actualOldTrip.totalBudget,
+          isPublic: updatedTrip.isPublic !== undefined ? updatedTrip.isPublic : actualOldTrip.isPublic,
+          publicSlug: updatedTrip.publicSlug !== undefined ? updatedTrip.publicSlug : actualOldTrip.publicSlug,
+          description: updatedTrip.description !== undefined ? updatedTrip.description : actualOldTrip.description,
+          createdAt: updatedTrip.createdAt || actualOldTrip.createdAt,
+          updatedAt: updatedTrip.updatedAt || actualOldTrip.updatedAt,
+          // Arrays aus dem Cache beibehalten
           budgetItems: oldData.budgetItems || actualOldTrip.budgetItems || [],
           activities: oldData.activities || actualOldTrip.activities || [],
           restaurants: oldData.restaurants || actualOldTrip.restaurants || []
         };
         
         console.log("🔄 Merged Trip nach Update:", mergedTrip);
+        console.log("🔄 BudgetItems beibehalten:", mergedTrip.budgetItems.length);
+        console.log("🔄 Activities beibehalten:", mergedTrip.activities.length);
+        console.log("🔄 Restaurants beibehalten:", mergedTrip.restaurants.length);
         return mergedTrip;
       });
       

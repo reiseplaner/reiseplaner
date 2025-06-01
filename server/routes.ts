@@ -48,15 +48,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const userId = req.user.id;
       const tripId = parseInt(req.params.id);
+      
+      console.log("🔍 GET /api/trips/:id Request:");
+      console.log("🔍 Trip ID:", tripId, "Type:", typeof tripId);
+      console.log("🔍 User ID:", userId);
+      
       const trip = await storage.getTripById(tripId, userId);
       
+      console.log("🔍 Trip loaded from database:");
+      console.log("🔍 Trip exists:", !!trip);
+      if (trip) {
+        console.log("🔍 Trip ID:", trip.id);
+        console.log("🔍 Budget Items count:", trip.budgetItems?.length || 0);
+        console.log("🔍 Activities count:", trip.activities?.length || 0);
+        console.log("🔍 Restaurants count:", trip.restaurants?.length || 0);
+        console.log("🔍 Budget Items:", trip.budgetItems);
+      }
+      
       if (!trip) {
+        console.log("🔴 Trip not found for user:", userId, "tripId:", tripId);
         return res.status(404).json({ message: "Trip not found" });
       }
       
       res.json(trip);
     } catch (error) {
-      console.error("Error fetching trip:", error);
+      console.error("🔴 Error fetching trip:", error);
       res.status(500).json({ message: "Failed to fetch trip" });
     }
   });
