@@ -115,8 +115,34 @@ export default function TripPlanning() {
     onSuccess: (updatedTrip) => {
       console.log("Trip successfully updated:", updatedTrip);
       
-      // Force cache refresh to get updated data
-      queryClient.invalidateQueries({ queryKey: ["/api/trips", id] });
+      // Aktualisiere den Cache intelligent, ohne die Budget-Items zu verlieren
+      queryClient.setQueryData(["/api/trips", id], (oldData: any) => {
+        if (!oldData) return updatedTrip;
+        
+        console.log("🔄 Alte Cache-Daten vor Trip-Update:", oldData);
+        
+        // Handle both array and object structures
+        let actualOldTrip;
+        if (Array.isArray(oldData)) {
+          actualOldTrip = oldData[0];
+        } else if (oldData["0"]) {
+          actualOldTrip = oldData["0"];
+        } else {
+          actualOldTrip = oldData;
+        }
+        
+        // Merge the updated trip data with existing budget items, activities, restaurants
+        const mergedTrip = {
+          ...actualOldTrip,
+          ...updatedTrip,
+          budgetItems: oldData.budgetItems || actualOldTrip.budgetItems || [],
+          activities: oldData.activities || actualOldTrip.activities || [],
+          restaurants: oldData.restaurants || actualOldTrip.restaurants || []
+        };
+        
+        console.log("🔄 Merged Trip nach Update:", mergedTrip);
+        return mergedTrip;
+      });
       
       toast({
         title: "Reise gespeichert",
