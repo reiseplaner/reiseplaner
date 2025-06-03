@@ -21,6 +21,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email").unique(),
+  username: varchar("username").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
@@ -236,4 +237,14 @@ export type PublicTripWithDetails = TripWithDetails & {
   comments: (TripComment & { user: User })[];
   upvoteCount: number;
   isUpvotedByUser?: boolean;
+};
+
+// Public trip with user info
+export type PublicTripWithUser = Trip & {
+  user: {
+    id: string;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  };
 };

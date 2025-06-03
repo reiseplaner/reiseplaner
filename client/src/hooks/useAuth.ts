@@ -1,10 +1,57 @@
 import { useEffect, useState } from 'react';
 import { User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import type { User as DbUser } from '@shared/schema';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [usernameSetupSkipped, setUsernameSetupSkipped] = useState(false);
+  const [dbUserLoadingTimeout, setDbUserLoadingTimeout] = useState(false);
+
+  // Check if username setup was skipped
+  useEffect(() => {
+    const skipped = localStorage.getItem('username-setup-skipped');
+    setUsernameSetupSkipped(skipped === 'true');
+  }, []);
+
+  // Get database user info
+  const { data: dbUser, isLoading: isLoadingDbUser, error: dbUserError } = useQuery<DbUser>({
+    queryKey: ['/api/auth/user'],
+    queryFn: async () => {
+      try {
+        const response = await apiRequest("GET", "/api/auth/user");
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      } catch (error) {
+        console.error('Failed to fetch database user:', error);
+        // Return null instead of throwing to prevent endless loading
+        return null;
+      }
+    },
+    enabled: !!user,
+    retry: 1, // Only retry once
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    // Add timeout to prevent endless loading
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  // Timeout for database user loading
+  useEffect(() => {
+    if (user && !dbUser && isLoadingDbUser && !dbUserError) {
+      const timeout = setTimeout(() => {
+        console.warn('Database user loading timed out after 10 seconds');
+        setDbUserLoadingTimeout(true);
+      }, 10000); // 10 seconds timeout
+
+      return () => clearTimeout(timeout);
+    }
+  }, [user, dbUser, isLoadingDbUser, dbUserError]);
 
   useEffect(() => {
     // Get initial session
@@ -70,12 +117,32 @@ export function useAuth() {
     if (error) {
       console.error('Error signing out:', error);
     }
+    // Clear the skipped flag on logout
+    localStorage.removeItem('username-setup-skipped');
+    setUsernameSetupSkipped(false);
   };
+
+  const skipUsernameSetup = () => {
+    localStorage.setItem('username-setup-skipped', 'true');
+    setUsernameSetupSkipped(true);
+  };
+
+  // Check if user needs to set username
+  // Only show username setup if user is authenticated, has no username, and hasn't skipped setup
+  const needsUsername = user && (!dbUser || (dbUser && !dbUser.username)) && !usernameSetupSkipped;
+
+  // Only show loading for initial auth check, not for database user fetch
+  const isAuthLoading = isLoading;
+  // Don't show loading for database user if there's an error, timeout, or if it's taking too long
+  const isDbUserLoading = user && isLoadingDbUser && !dbUserError && !dbUserLoadingTimeout;
 
   return {
     user,
-    isLoading,
+    dbUser,
+    isLoading: isAuthLoading || isDbUserLoading,
     isAuthenticated: !!user,
+    needsUsername,
+    skipUsernameSetup,
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,

@@ -439,7 +439,7 @@ export default function PublicTripDetail() {
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
                           <span className="font-medium text-sm">
-                            {comment.user.firstName} {comment.user.lastName}
+                            {comment.user.username || `${comment.user.firstName} ${comment.user.lastName}` || "Anonymer Benutzer"}
                           </span>
                           <span className="text-xs text-slate-500">
                             {comment.createdAt ? new Date(comment.createdAt.toString()).toLocaleDateString("de-DE") : "Unbekannt"}

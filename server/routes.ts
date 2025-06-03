@@ -1,23 +1,60 @@
 import type { Express } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { supabaseAuth } from "./supabaseAuth";
+import { supabaseAuth, supabase } from "./supabaseAuth";
 import {
   insertTripSchema,
   insertBudgetItemSchema,
   insertActivitySchema,
   insertRestaurantSchema,
+  users,
 } from "@shared/schema";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
+import { db } from "./db";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      const uploadDir = path.join(process.cwd(), 'uploads', 'profiles');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, `profile-${uniqueSuffix}${path.extname(file.originalname)}`);
+    }
+  }),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Nur Bilddateien sind erlaubt!') as any, false);
+    }
+  }
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Serve uploaded files
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
   // Auth routes
   app.get('/api/auth/user', supabaseAuth, async (req: any, res) => {
     try {
       const supabaseUser = req.user;
       
       // Ensure user exists in our database
-      await storage.upsertUser({
+      const dbUser = await storage.upsertUser({
         id: supabaseUser.id,
         email: supabaseUser.email,
         firstName: supabaseUser.user_metadata?.full_name?.split(' ')[0] || null,
@@ -25,10 +62,200 @@ export async function registerRoutes(app: Express): Promise<Server> {
         profileImageUrl: supabaseUser.user_metadata?.avatar_url || null,
       });
       
-      res.json(supabaseUser);
+      // Return the database user info, not the Supabase user
+      res.json(dbUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Upload profile image
+  app.post('/api/auth/profile-image', supabaseAuth, upload.single('profileImage'), async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      if (!req.file) {
+        return res.status(400).json({ message: "Keine Datei hochgeladen" });
+      }
+
+      console.log(`🖼️ Uploading profile image for user ${userId}: ${req.file.filename}`);
+
+      // Generate URL for the uploaded file
+      const imageUrl = `/uploads/profiles/${req.file.filename}`;
+
+      // Update user's profile image URL in database
+      const updatedUser = await storage.updateUserProfileImage(userId, imageUrl);
+      
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update profile image" });
+      }
+
+      console.log(`✅ Profile image updated for user ${userId}: ${imageUrl}`);
+      res.json({ 
+        message: "Profilbild erfolgreich hochgeladen", 
+        user: updatedUser,
+        imageUrl 
+      });
+    } catch (error) {
+      console.error("🔴 Error uploading profile image:", error);
+      res.status(500).json({ message: "Failed to upload profile image" });
+    }
+  });
+
+  // Change password
+  app.post('/api/auth/change-password', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { currentPassword, newPassword } = req.body;
+
+      console.log(`🔐 Changing password for user ${userId}`);
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ 
+          message: "Aktuelles und neues Passwort sind erforderlich" 
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({ 
+          message: "Neues Passwort muss mindestens 6 Zeichen lang sein" 
+        });
+      }
+
+      // Use Supabase to change password
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        password: newPassword
+      });
+
+      if (error) {
+        console.error("🔴 Supabase password change error:", error);
+        return res.status(400).json({ 
+          message: error.message || "Passwort konnte nicht geändert werden" 
+        });
+      }
+
+      console.log(`✅ Password changed successfully for user ${userId}`);
+      res.json({ message: "Passwort erfolgreich geändert" });
+    } catch (error) {
+      console.error("🔴 Error changing password:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // Check username availability
+  app.get('/api/auth/username/:username/available', async (req, res) => {
+    try {
+      const { username } = req.params;
+      
+      if (!username || username.length < 3) {
+        return res.status(400).json({ 
+          available: false, 
+          message: "Username muss mindestens 3 Zeichen lang sein" 
+        });
+      }
+
+      // Check for valid characters (alphanumeric, underscore, hyphen)
+      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        return res.status(400).json({ 
+          available: false, 
+          message: "Username darf nur Buchstaben, Zahlen, _ und - enthalten" 
+        });
+      }
+
+      const isAvailable = await storage.checkUsernameAvailability(username);
+      res.json({ available: isAvailable });
+    } catch (error) {
+      console.error("Error checking username availability:", error);
+      res.status(500).json({ message: "Failed to check username availability" });
+    }
+  });
+
+  // Set username
+  app.post('/api/auth/username', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { username } = req.body;
+      
+      console.log(`🔧 Setting username for user ${userId}: ${username}`);
+      
+      if (!username || username.length < 3) {
+        console.log(`🔴 Invalid username length: ${username?.length || 0}`);
+        return res.status(400).json({ 
+          message: "Username muss mindestens 3 Zeichen lang sein" 
+        });
+      }
+
+      // Check for valid characters
+      if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+        console.log(`🔴 Invalid username characters: ${username}`);
+        return res.status(400).json({ 
+          message: "Username darf nur Buchstaben, Zahlen, _ und - enthalten" 
+        });
+      }
+
+      // Check availability
+      console.log(`🔍 Checking username availability: ${username}`);
+      const isAvailable = await storage.checkUsernameAvailability(username);
+      console.log(`🔍 Username available: ${isAvailable}`);
+      
+      if (!isAvailable) {
+        console.log(`🔴 Username not available: ${username}`);
+        return res.status(400).json({ 
+          message: "Username ist bereits vergeben" 
+        });
+      }
+
+      // Ensure user exists in database first
+      console.log(`🔧 Ensuring user exists in database: ${userId}`);
+      const existingUser = await storage.getUser(userId);
+      if (!existingUser) {
+        console.log(`🔧 User not found, creating user: ${userId}`);
+        // Create user first
+        await storage.upsertUser({
+          id: userId,
+          email: req.user.email,
+          firstName: req.user.user_metadata?.full_name?.split(' ')[0] || null,
+          lastName: req.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
+          profileImageUrl: req.user.user_metadata?.avatar_url || null,
+        });
+      }
+
+      console.log(`🔧 Updating username for user: ${userId}`);
+      const updatedUser = await storage.updateUserUsername(userId, username);
+      console.log(`🔧 Updated user:`, updatedUser);
+      
+      if (!updatedUser) {
+        console.error(`🔴 Failed to update username for user: ${userId}`);
+        return res.status(500).json({ message: "Failed to update username" });
+      }
+
+      console.log(`✅ Username set successfully for user ${userId}: ${username}`);
+      res.json({ message: "Username erfolgreich gesetzt", user: updatedUser });
+    } catch (error) {
+      console.error("🔴 Error setting username:", error);
+      res.status(500).json({ message: "Failed to set username" });
+    }
+  });
+
+  // Delete current user
+  app.delete('/api/auth/user', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      console.log("🗑️ Deleting user:", userId);
+      
+      const success = await storage.deleteUser(userId);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete user" });
+      }
+      
+      console.log("✅ User deleted successfully:", userId);
+      res.json({ message: "Benutzer erfolgreich gelöscht" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
     }
   });
 
@@ -543,6 +770,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email: req.user.email
       }
     });
+  });
+
+  // Debug route to check users without username
+  app.get('/api/debug/users-without-username', async (req, res) => {
+    try {
+      const usersWithoutUsername = await db
+        .select()
+        .from(users)
+        .where(sql`username IS NULL`);
+      
+      res.json({
+        count: usersWithoutUsername.length,
+        users: usersWithoutUsername.map(u => ({
+          id: u.id,
+          email: u.email,
+          username: u.username,
+          firstName: u.firstName,
+          lastName: u.lastName,
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching users without username:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Temporary debug route to delete current user and logout
+  app.get('/api/debug/delete-current-user', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const userEmail = req.user.email;
+      
+      console.log("🗑️ Debug: Deleting user:", userId, userEmail);
+      
+      // Delete user from database
+      const success = await storage.deleteUser(userId);
+      
+      if (!success) {
+        return res.status(500).json({ message: "Failed to delete user from database" });
+      }
+      
+      console.log("✅ User deleted from database:", userId);
+      
+      // Return HTML page that logs out and redirects
+      res.send(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Benutzer gelöscht</title>
+          <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+        </head>
+        <body>
+          <h1>Benutzer wird gelöscht...</h1>
+          <p>Benutzer ${userEmail} wurde aus der Datenbank gelöscht.</p>
+          <p>Du wirst automatisch ausgeloggt und zur Startseite weitergeleitet...</p>
+          
+          <script>
+            const { createClient } = supabase;
+            const supabaseClient = createClient(
+              '${process.env.SUPABASE_URL}',
+              '${process.env.SUPABASE_ANON_KEY}'
+            );
+            
+            // Logout and redirect
+            supabaseClient.auth.signOut().then(() => {
+              console.log('Logged out successfully');
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 2000);
+            }).catch(err => {
+              console.error('Logout error:', err);
+              setTimeout(() => {
+                window.location.href = '/';
+              }, 2000);
+            });
+          </script>
+        </body>
+        </html>
+      `);
+    } catch (error) {
+      console.error("Error in debug delete user:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
   });
 
   const httpServer = createServer(app);

@@ -21,9 +21,12 @@ export async function apiRequest(
   console.log(`🌐 Session:`, session ? 'Present' : 'Missing');
   console.log(`🌐 Access Token:`, session?.access_token ? 'Present' : 'Missing');
   
-  const headers: Record<string, string> = {
-    ...(data ? { "Content-Type": "application/json" } : {}),
-  };
+  const headers: Record<string, string> = {};
+
+  // Only set Content-Type for non-FormData requests
+  if (data && !(data instanceof FormData)) {
+    headers["Content-Type"] = "application/json";
+  }
 
   if (session?.access_token) {
     headers.Authorization = `Bearer ${session.access_token}`;
@@ -34,7 +37,7 @@ export async function apiRequest(
   const res = await fetch(url, {
     method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
+    body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
     credentials: "include",
   });
 

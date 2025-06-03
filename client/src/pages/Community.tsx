@@ -10,7 +10,15 @@ import { Heart } from "lucide-react";
 import type { Trip } from "@shared/schema";
 
 // Extended trip type with upvote count
-type TripWithUpvotes = Trip & { upvoteCount: number };
+type TripWithUpvotes = Trip & { 
+  upvoteCount: number;
+  user?: {
+    id: string;
+    username: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  };
+};
 
 export default function Community() {
   const [, setLocation] = useLocation();
@@ -222,7 +230,12 @@ export default function Community() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
                       <div className="w-8 h-8 bg-slate-300 rounded-full mr-2"></div>
-                      <span className="text-sm text-slate-600">Öffentlicher Plan</span>
+                      <span className="text-sm text-slate-600">
+                        {trip.user?.username || 
+                         (trip.user?.firstName && trip.user?.lastName ? 
+                           `${trip.user.firstName} ${trip.user.lastName}` : 
+                           "Anonymer Benutzer")}
+                      </span>
                     </div>
                     <Button 
                       size="sm"

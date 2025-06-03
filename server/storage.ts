@@ -12,6 +12,7 @@ import {
   type InsertTrip,
   type TripWithDetails,
   type PublicTripWithDetails,
+  type PublicTripWithUser,
   type BudgetItem,
   type InsertBudgetItem,
   type Activity,
@@ -30,6 +31,10 @@ export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  checkUsernameAvailability(username: string): Promise<boolean>;
+  updateUserUsername(userId: string, username: string): Promise<User | undefined>;
+  updateUserProfileImage(userId: string, profileImageUrl: string): Promise<User | undefined>;
+  deleteUser(userId: string): Promise<boolean>;
   
   // Trip operations
   getTripsByUserId(userId: string): Promise<Trip[]>;
@@ -39,7 +44,7 @@ export interface IStorage {
   deleteTrip(id: number, userId: string): Promise<boolean>;
   
   // Public trip operations
-  getPublicTrips(limit?: number): Promise<Trip[]>;
+  getPublicTrips(limit?: number): Promise<PublicTripWithUser[]>;
   getTripBySlug(slug: string): Promise<TripWithDetails | undefined>;
   getPublicTripWithCommunityFeatures(slug: string, userId?: string): Promise<PublicTripWithDetails | undefined>;
   
@@ -78,6 +83,38 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user;
+  }
+
+  async checkUsernameAvailability(username: string): Promise<boolean> {
+    const [existingUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username));
+    return !existingUser;
+  }
+
+  async updateUserUsername(userId: string, username: string): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        username,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser;
+  }
+
+  async updateUserProfileImage(userId: string, profileImageUrl: string): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({ 
+        profileImageUrl,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    return updatedUser;
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
@@ -180,13 +217,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Public trip operations
-  async getPublicTrips(limit = 10): Promise<Trip[]> {
-    return await db
-      .select()
+  async getPublicTrips(limit: number = 10): Promise<PublicTripWithUser[]> {
+    const publicTrips = await db
+      .select({
+        id: trips.id,
+        name: trips.name,
+        departure: trips.departure,
+        destination: trips.destination,
+        startDate: trips.startDate,
+        endDate: trips.endDate,
+        travelers: trips.travelers,
+        totalBudget: trips.totalBudget,
+        description: trips.description,
+        isPublic: trips.isPublic,
+        publicSlug: trips.publicSlug,
+        userId: trips.userId,
+        createdAt: trips.createdAt,
+        updatedAt: trips.updatedAt,
+        user: {
+          id: users.id,
+          username: users.username,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        },
+      })
       .from(trips)
+      .innerJoin(users, eq(trips.userId, users.id))
       .where(eq(trips.isPublic, true))
-      .orderBy(desc(trips.updatedAt))
+      .orderBy(desc(trips.createdAt))
       .limit(limit);
+
+    return publicTrips;
   }
 
   async getTripBySlug(slug: string): Promise<TripWithDetails | undefined> {
@@ -284,6 +345,7 @@ export class DatabaseStorage implements IStorage {
         user: {
           id: users.id,
           email: users.email,
+          username: users.username,
           firstName: users.firstName,
           lastName: users.lastName,
           profileImageUrl: users.profileImageUrl,
@@ -408,6 +470,55 @@ export class DatabaseStorage implements IStorage {
   async deleteRestaurant(id: number): Promise<boolean> {
     const result = await db.delete(restaurants).where(eq(restaurants.id, id));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  async deleteUser(userId: string): Promise<boolean> {
+    try {
+      console.log("🗑️ Starting user deletion process for:", userId);
+      
+      // Get all trips by this user to delete their related data
+      const userTrips = await db
+        .select({ id: trips.id })
+        .from(trips)
+        .where(eq(trips.userId, userId));
+      
+      console.log("🗑️ Found trips to delete:", userTrips.length);
+      
+      // Delete all related data for each trip
+      for (const trip of userTrips) {
+        console.log("🗑️ Deleting data for trip:", trip.id);
+        
+        // Delete budget items, activities, restaurants for this trip
+        await Promise.all([
+          db.delete(budgetItems).where(eq(budgetItems.tripId, trip.id)),
+          db.delete(activities).where(eq(activities.tripId, trip.id)),
+          db.delete(restaurants).where(eq(restaurants.tripId, trip.id)),
+          db.delete(tripUpvotes).where(eq(tripUpvotes.tripId, trip.id)),
+          db.delete(tripComments).where(eq(tripComments.tripId, trip.id)),
+        ]);
+      }
+      
+      // Delete all trips by this user
+      await db.delete(trips).where(eq(trips.userId, userId));
+      console.log("🗑️ Deleted all trips for user");
+      
+      // Delete all upvotes by this user (on other people's trips)
+      await db.delete(tripUpvotes).where(eq(tripUpvotes.userId, userId));
+      console.log("🗑️ Deleted all upvotes by user");
+      
+      // Delete all comments by this user (on other people's trips)
+      await db.delete(tripComments).where(eq(tripComments.userId, userId));
+      console.log("🗑️ Deleted all comments by user");
+      
+      // Finally, delete the user
+      const result = await db.delete(users).where(eq(users.id, userId));
+      console.log("🗑️ Deleted user, affected rows:", result.rowCount);
+      
+      return (result.rowCount ?? 0) > 0;
+    } catch (error) {
+      console.error("🔴 Error deleting user:", error);
+      throw error;
+    }
   }
 }
 
