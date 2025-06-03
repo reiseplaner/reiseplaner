@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Edit, Trash2, ExternalLink, Check, X } from "lucide-react";
+import { Plus, Edit, Trash2, ExternalLink, Check, X, Plane } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertBudgetItemSchema, type TripWithDetails, type BudgetItem } from "@shared/schema";
 import { z } from "zod";
 import { supabase } from "@/lib/supabase";
+import FlightSearchResults from "./FlightSearchResults";
 
 interface BudgetOverviewProps {
   trip: TripWithDetails;
@@ -95,6 +96,8 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   const queryClient = useQueryClient();
   const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
   const [editingItem, setEditingItem] = useState<BudgetItem | null>(null);
+  const [flightSearchResults, setFlightSearchResults] = useState<any>(null);
+  const [isSearchingFlights, setIsSearchingFlights] = useState(false);
 
   const form = useForm<z.infer<typeof budgetItemFormSchema>>({
     resolver: zodResolver(budgetItemFormSchema),
@@ -467,6 +470,45 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     return categoryItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || "0"), 0);
   };
 
+  // Flight search mutation
+  const searchFlightsMutation = useMutation({
+    mutationFn: async (tripId: number) => {
+      const response = await apiRequest("POST", `/api/trips/${tripId}/search-flights`);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      console.log("🟢 Flight search successful:", data);
+      setFlightSearchResults(data);
+      toast({
+        title: "Flugsuche erfolgreich",
+        description: `${data.flights.length} Flüge gefunden`,
+      });
+    },
+    onError: (error: any) => {
+      console.error("🔴 Flight search error:", error);
+      toast({
+        title: "Flugsuche fehlgeschlagen",
+        description: error.message || "Fehler beim Suchen von Flügen",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSearchFlights = () => {
+    setIsSearchingFlights(true);
+    searchFlightsMutation.mutate(trip.id);
+  };
+
+  const handleCloseFlightResults = () => {
+    setFlightSearchResults(null);
+    setIsSearchingFlights(false);
+  };
+
+  // Check if there's a flight budget item in Transport category
+  const hasFlightBudgetItem = trip.budgetItems?.some(item => 
+    item.category === "Transport" && item.subcategory === "Flug"
+  );
+
   return (
     <div className="space-y-6">
       {/* Budget Overview */}
@@ -717,6 +759,19 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
+                                  {/* Flight search button for flight budget items */}
+                                  {item.category === "Transport" && item.subcategory === "Flug" && (
+                                    <Button 
+                                      size="sm" 
+                                      variant="ghost"
+                                      onClick={handleSearchFlights}
+                                      disabled={searchFlightsMutation.isPending}
+                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      title="Flüge prüfen"
+                                    >
+                                      <Plane className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                 </div>
                               </td>
                             </>
@@ -829,6 +884,15 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
           );
         })}
       </div>
+
+      {/* Flight Search Results Modal */}
+      {flightSearchResults && (
+        <FlightSearchResults
+          searchCriteria={flightSearchResults.searchCriteria}
+          flights={flightSearchResults.flights}
+          onClose={handleCloseFlightResults}
+        />
+      )}
 
       {/* Recommendations Placeholder */}
       <Card className="border-2 border-dashed border-slate-300 bg-slate-50">
