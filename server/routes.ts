@@ -859,7 +859,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Flight search route (Omio API proxy)
+  // Flight search route (Simple Omio redirect)
   app.post('/api/trips/:tripId/search-flights', supabaseAuth, async (req: any, res) => {
     try {
       const tripId = parseInt(req.params.tripId);
@@ -877,6 +877,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if trip has required data for flight search
+      console.log("🔧 Trip data for flight search:", {
+        departure: trip.departure,
+        destination: trip.destination,
+        startDate: trip.startDate,
+        travelers: trip.travelers
+      });
+      
       if (!trip.departure || !trip.destination || !trip.startDate || !trip.travelers) {
         console.log("🔴 Missing required trip data for flight search");
         return res.status(400).json({ 
@@ -896,129 +903,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Check if Omio API credentials are configured
-      const omioAccountSid = process.env.OMIO_ACCOUNT_SID;
-      const omioAuthToken = process.env.OMIO_AUTH_TOKEN;
-      const omioAffiliateId = process.env.OMIO_AFFILIATE_ID || 'default-affiliate-id';
-      const omioBaseUrl = process.env.OMIO_API_BASE_URL || 'https://api.omio.com';
+      // Simple Omio redirect with affiliate ID
+      const affiliateId = '5197603';
+      const omioUrl = `https://www.omio.com/flights?partner=${affiliateId}`;
+      
+      console.log("🔵 Redirecting to Omio with affiliate ID:", omioUrl);
 
-      if (omioAccountSid && omioAuthToken) {
-        console.log("🔵 Using real Omio API");
-        
-        try {
-          // Prepare Omio API request
-          const searchParams = {
-            departure: trip.departure,
-            destination: trip.destination,
-            departureDate: trip.startDate,
-            travelers: trip.travelers,
-          };
-
-          console.log("🔵 Omio API request data:", searchParams);
-
-          // Real Omio API call
-          const omioResponse = await fetch(`${process.env.OMIO_API_BASE_URL}/v1/search/flights`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Basic ${Buffer.from(`${process.env.OMIO_ACCOUNT_SID}:${process.env.OMIO_AUTH_TOKEN}`).toString('base64')}`,
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({
-              origin: searchParams.departure,
-              destination: searchParams.destination,
-              departure_date: searchParams.departureDate,
-              passengers: searchParams.travelers,
-              cabin_class: 'economy',
-              currency: 'EUR',
-              locale: 'de'
-            })
-          });
-
-          console.log("🔵 Omio API response status:", omioResponse.status);
-
-          if (!omioResponse.ok) {
-            console.log("🔴 Omio API error, falling back to mock data");
-            const mockResults = getMockFlightResults(trip, process.env.OMIO_AFFILIATE_ID || '5197603');
-            return res.json({
-              success: true,
-              searchCriteria: searchParams,
-              flights: mockResults,
-              source: 'mock_fallback'
-            });
-          }
-
-          const omioData = await omioResponse.json();
-          console.log("🔵 Raw Omio API response:", JSON.stringify(omioData, null, 2));
-
-          // Transform Omio API response to our format
-          const transformedFlights = omioData.flights?.map((flight: any) => ({
-            id: flight.id || flight.flight_number,
-            airline: flight.airline?.name || flight.carrier,
-            flightNumber: flight.flight_number,
-            departure: {
-              airport: flight.departure?.airport_code || searchParams.departure,
-              time: flight.departure?.time,
-              date: flight.departure?.date || searchParams.departureDate,
-            },
-            arrival: {
-              airport: flight.arrival?.airport_code || searchParams.destination,
-              time: flight.arrival?.time,
-              date: flight.arrival?.date || searchParams.departureDate,
-            },
-            duration: flight.duration,
-            stops: flight.stops || 0,
-            price: {
-              amount: flight.price?.amount || flight.total_price,
-              currency: flight.price?.currency || 'EUR',
-            },
-            bookingLink: `https://omio.sjv.io/mObGEX?departure=${encodeURIComponent(searchParams.departure)}&destination=${encodeURIComponent(searchParams.destination)}&departureDate=${encodeURIComponent(searchParams.departureDate)}&passengers=${searchParams.travelers}&class=economy&flight_id=${encodeURIComponent(flight.id || flight.flight_number)}`,
-            cabinClass: flight.cabin_class || 'Economy',
-          })) || [];
-
-          console.log("🟢 Transformed flight results:", transformedFlights.length, "flights");
-
-          return res.json({
-            success: true,
-            searchCriteria: searchParams,
-            flights: transformedFlights,
-            source: 'omio_api'
-          });
-
-        } catch (omioError: any) {
-          console.error("🔴 Omio API error:", omioError);
-          // Fallback to mock data
-          const mockResults = getMockFlightResults(trip, process.env.OMIO_AFFILIATE_ID || '5197603');
-          return res.json({
-            success: true,
-            searchCriteria: {
-              departure: trip.departure,
-              destination: trip.destination,
-              departureDate: trip.startDate,
-              travelers: trip.travelers,
-            },
-            flights: mockResults,
-            source: 'mock_fallback'
-          });
-        }
-      } else {
-        // Use mock data when Omio API credentials are not configured
-        console.log("🔵 Omio API credentials not configured, using mock data");
-        const mockResults = getMockFlightResults(trip, process.env.OMIO_AFFILIATE_ID || '5197603');
-        return res.json({
-          success: true,
-          searchCriteria: {
-            departure: trip.departure,
-            destination: trip.destination,
-            departureDate: trip.startDate,
-            travelers: trip.travelers,
-          },
-          flights: mockResults,
-          source: 'mock'
-        });
-      }
-
-      console.log("🟢 Flight search completed successfully");
+      return res.json({
+        success: true,
+        redirectUrl: omioUrl,
+        message: "Weiterleitung zu Omio für Flugsuche",
+        affiliateId: affiliateId,
+        source: 'omio_redirect'
+      });
 
     } catch (error: any) {
       console.error("🔴 Flight search error:", error);
@@ -1030,83 +927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Helper function for mock flight data
-  function getMockFlightResults(trip: any, affiliateId: string) {
-    // Mock flight data (will be replaced with real Omio API call)
-    const mockFlights = [
-      {
-        id: "LH441",
-        airline: "Lufthansa",
-        flightNumber: "LH 441",
-        departure: {
-          airport: trip.departure,
-          time: "10:30",
-          date: trip.startDate,
-        },
-        arrival: {
-          airport: trip.destination,
-          time: "14:45",
-          date: trip.startDate,
-        },
-        duration: "8h 15m",
-        stops: 0,
-        price: {
-          amount: 650,
-          currency: "EUR",
-        },
-        bookingLink: `https://omio.sjv.io/mObGEX?departure=${encodeURIComponent(trip.departure)}&destination=${encodeURIComponent(trip.destination)}&departureDate=${encodeURIComponent(trip.startDate)}&passengers=${trip.travelers}&class=economy`,
-        cabinClass: "Economy",
-      },
-      {
-        id: "BA903",
-        airline: "British Airways",
-        flightNumber: "BA 903",
-        departure: {
-          airport: trip.departure,
-          time: "16:20",
-          date: trip.startDate,
-        },
-        arrival: {
-          airport: trip.destination,
-          time: "20:55",
-          date: trip.startDate,
-        },
-        duration: "8h 35m",
-        stops: 0,
-        price: {
-          amount: 720,
-          currency: "EUR",
-        },
-        bookingLink: `https://omio.sjv.io/mObGEX?departure=${encodeURIComponent(trip.departure)}&destination=${encodeURIComponent(trip.destination)}&departureDate=${encodeURIComponent(trip.startDate)}&passengers=${trip.travelers}&class=economy`,
-        cabinClass: "Economy",
-      },
-      {
-        id: "AF1340",
-        airline: "Air France",
-        flightNumber: "AF 1340",
-        departure: {
-          airport: trip.departure,
-          time: "07:15",
-          date: trip.startDate,
-        },
-        arrival: {
-          airport: trip.destination,
-          time: "12:30",
-          date: trip.startDate,
-        },
-        duration: "9h 15m",
-        stops: 1,
-        price: {
-          amount: 580,
-          currency: "EUR",
-        },
-        bookingLink: `https://omio.sjv.io/mObGEX?departure=${encodeURIComponent(trip.departure)}&destination=${encodeURIComponent(trip.destination)}&departureDate=${encodeURIComponent(trip.startDate)}&passengers=${trip.travelers}&class=economy`,
-        cabinClass: "Economy",
-      },
-    ];
 
-    return mockFlights;
-  }
 
   const httpServer = createServer(app);
   return httpServer;

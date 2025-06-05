@@ -478,11 +478,23 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     },
     onSuccess: (data) => {
       console.log("🟢 Flight search successful:", data);
-      setFlightSearchResults(data);
-      toast({
-        title: "Flugsuche erfolgreich",
-        description: `${data.flights.length} Flüge gefunden`,
-      });
+      
+      if (data.redirectUrl) {
+        // Simple redirect to Omio
+        window.open(data.redirectUrl, '_blank');
+        toast({
+          title: "Weiterleitung zu Omio",
+          description: data.message || "Neue Seite wird geöffnet...",
+        });
+        setIsSearchingFlights(false);
+      } else {
+        // Fallback for other response types
+        setFlightSearchResults(data);
+        toast({
+          title: "Flugsuche erfolgreich",
+          description: `${data.flights?.length || 0} Flüge gefunden`,
+        });
+      }
     },
     onError: (error: any) => {
       console.error("🔴 Flight search error:", error);
