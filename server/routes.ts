@@ -208,17 +208,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Ensure user exists in database first
       console.log(`🔧 Ensuring user exists in database: ${userId}`);
-      const existingUser = await storage.getUser(userId);
+      let existingUser = await storage.getUser(userId);
       if (!existingUser) {
         console.log(`🔧 User not found, creating user: ${userId}`);
         // Create user first
-        await storage.upsertUser({
+        existingUser = await storage.upsertUser({
           id: userId,
           email: req.user.email,
           firstName: req.user.user_metadata?.full_name?.split(' ')[0] || null,
           lastName: req.user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
           profileImageUrl: req.user.user_metadata?.avatar_url || null,
         });
+        console.log(`🔧 User created:`, existingUser);
       }
 
       console.log(`🔧 Updating username for user: ${userId}`);
@@ -226,8 +227,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`🔧 Updated user:`, updatedUser);
       
       if (!updatedUser) {
-        console.error(`🔴 Failed to update username for user: ${userId}`);
-        return res.status(500).json({ message: "Failed to update username" });
+        console.error(`🔴 Failed to update username for user: ${userId} - No user returned from update`);
+        // Try to get the user again to see if it exists
+        const userCheck = await storage.getUser(userId);
+        console.log(`🔧 User check after failed update:`, userCheck);
+        return res.status(500).json({ message: "Benutzer konnte nicht aktualisiert werden" });
       }
 
       console.log(`✅ Username set successfully for user ${userId}: ${username}`);
@@ -987,7 +991,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const mockResults = getMockFlightResults(trip, process.env.OMIO_AFFILIATE_ID || '5197603');
           return res.json({
             success: true,
-            searchCriteria: searchParams,
+            searchCriteria: {
+              departure: trip.departure,
+              destination: trip.destination,
+              departureDate: trip.startDate,
+              travelers: trip.travelers,
+            },
             flights: mockResults,
             source: 'mock_fallback'
           });

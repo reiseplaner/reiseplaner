@@ -94,15 +94,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUserUsername(userId: string, username: string): Promise<User | undefined> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ 
-        username,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, userId))
-      .returning();
-    return updatedUser;
+    try {
+      console.log(`🔧 DatabaseStorage: Updating username for user ${userId} to ${username}`);
+      
+      const [updatedUser] = await db
+        .update(users)
+        .set({ 
+          username,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      console.log(`🔧 DatabaseStorage: Update result:`, updatedUser);
+      return updatedUser;
+    } catch (error) {
+      console.error(`🔴 DatabaseStorage: Error updating username for user ${userId}:`, error);
+      throw error;
+    }
   }
 
   async updateUserProfileImage(userId: string, profileImageUrl: string): Promise<User | undefined> {
@@ -119,16 +128,23 @@ export class DatabaseStorage implements IStorage {
 
   async upsertUser(userData: UpsertUser): Promise<User> {
     try {
+      console.log(`🔧 DatabaseStorage: Attempting to upsert user:`, userData);
+      
       // Try to insert new user
       const [user] = await db
         .insert(users)
         .values(userData)
         .returning();
+      
+      console.log(`🔧 DatabaseStorage: User inserted successfully:`, user);
       return user;
     } catch (error: any) {
+      console.log(`🔧 DatabaseStorage: Insert failed, handling conflict:`, error.code, error.detail);
+      
       if (error.code === '23505') {
         // Handle both email and id conflicts
         if (error.detail?.includes('email')) {
+          console.log(`🔧 DatabaseStorage: Email conflict detected, updating user with same email`);
           // Email conflict - update existing user with same email
           const [user] = await db
             .update(users)
@@ -141,20 +157,31 @@ export class DatabaseStorage implements IStorage {
             })
             .where(eq(users.email, userData.email!))
             .returning();
+          
+          console.log(`🔧 DatabaseStorage: User updated by email:`, user);
           return user;
         } else {
+          console.log(`🔧 DatabaseStorage: ID conflict detected, updating user with same ID`);
           // ID conflict - update existing user with same id
+          // Only update fields that can be safely changed, not the ID itself
           const [user] = await db
             .update(users)
             .set({
-              ...userData,
+              email: userData.email,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              profileImageUrl: userData.profileImageUrl,
               updatedAt: new Date(),
             })
             .where(eq(users.id, userData.id))
             .returning();
+          
+          console.log(`🔧 DatabaseStorage: User updated by ID:`, user);
           return user;
         }
       }
+      
+      console.error(`🔴 DatabaseStorage: Unexpected error in upsertUser:`, error);
       throw error;
     }
   }

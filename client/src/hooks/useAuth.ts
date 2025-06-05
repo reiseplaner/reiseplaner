@@ -76,6 +76,9 @@ export function useAuth() {
       provider: 'google',
       options: {
         redirectTo: window.location.origin,
+        queryParams: {
+          prompt: 'select_account',
+        },
       },
     });
     if (error) {
@@ -122,6 +125,23 @@ export function useAuth() {
     setUsernameSetupSkipped(false);
   };
 
+  const forceSignOut = async () => {
+    console.log('🔧 Force signing out - clearing all local auth data');
+    
+    // Clear all local storage
+    localStorage.removeItem('username-setup-skipped');
+    localStorage.removeItem('supabase.auth.token');
+    
+    // Clear session storage
+    sessionStorage.clear();
+    
+    // Sign out from Supabase
+    await supabase.auth.signOut();
+    
+    // Force reload the page to reset all state
+    window.location.reload();
+  };
+
   const skipUsernameSetup = () => {
     localStorage.setItem('username-setup-skipped', 'true');
     setUsernameSetupSkipped(true);
@@ -147,5 +167,6 @@ export function useAuth() {
     signInWithEmail,
     signUpWithEmail,
     signOut,
+    forceSignOut,
   };
 }

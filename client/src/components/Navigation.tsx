@@ -1,9 +1,20 @@
 import { MapPin } from "lucide-react";
 import { useLocation } from "wouter";
 import ProfileDropdown from "@/components/ProfileDropdown";
+import { useAuth } from "@/hooks/useAuth";
+import { Button } from "@/components/ui/button";
 
 export default function Navigation() {
   const [location, setLocation] = useLocation();
+  const { user, forceSignOut, isAuthenticated, isLoading } = useAuth();
+
+  // Debug logging
+  console.log('🔍 Navigation Debug:', { 
+    user: !!user, 
+    isAuthenticated, 
+    isLoading,
+    userDetails: user ? { id: user.id, email: user.email } : null
+  });
 
   return (
     <nav className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
@@ -40,6 +51,22 @@ export default function Navigation() {
           
           <div className="flex items-center space-x-4">
             <ProfileDropdown />
+            
+            {/* Always visible debug button to reset session */}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={forceSignOut}
+              className="text-red-600 border-red-200 hover:bg-red-50"
+              title={`Debug: Auth=${isAuthenticated}, User=${!!user}, Loading=${isLoading}`}
+            >
+              🔧 Zurücksetzen
+            </Button>
+            
+            {/* Show auth status for debugging */}
+            <div className="text-xs text-gray-500 hidden md:block">
+              Auth: {isAuthenticated ? '✓' : '✗'} | User: {user ? '✓' : '✗'}
+            </div>
           </div>
         </div>
       </div>

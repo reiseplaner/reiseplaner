@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Compass } from "lucide-react";
+import { Plus, Compass, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -7,12 +7,40 @@ import { useLocation } from "wouter";
 import Navigation from "@/components/Navigation";
 import TripCard from "@/components/TripCard";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 import type { Trip } from "@shared/schema";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { forceSignOut, isAuthenticated, user } = useAuth();
+
+  // Simple reset function that clears everything and redirects
+  const handleEmergencyReset = () => {
+    console.log('🚨 Emergency reset triggered');
+    
+    // Show confirmation
+    if (!confirm('Möchten Sie wirklich alle Authentifizierungsdaten zurücksetzen und zur Anmeldeseite wechseln?')) {
+      return;
+    }
+    
+    try {
+      // Clear all local and session storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear query cache
+      queryClient.clear();
+      
+      // Force a complete page reload to reset all state
+      window.location.replace('/');
+    } catch (error) {
+      console.error('Error during reset:', error);
+      // Fallback: just reload the page
+      window.location.reload();
+    }
+  };
 
   const { data: trips = [], isLoading: tripsLoading } = useQuery<Trip[]>({
     queryKey: ["/api/trips"],
@@ -105,12 +133,37 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50">
       <Navigation />
       
+      {/* Emergency reset button if auth is broken */}
+      {!user && (
+        <div className="fixed top-4 right-4 z-50">
+          <Button 
+            onClick={handleEmergencyReset}
+            className="bg-red-600 text-white hover:bg-red-700 shadow-lg"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Notfall-Reset
+          </Button>
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">Meine Reisen</h1>
-            <p className="text-slate-600 mt-1">Verwalte und plane deine Reisen</p>
+            <p className="text-slate-600 mt-1">
+              Verwalte und plane deine Reisen
+              {!user && (
+                <span className="ml-4">
+                  <button 
+                    onClick={handleEmergencyReset}
+                    className="text-red-600 underline hover:text-red-800"
+                  >
+                    → Authentifizierung zurücksetzen
+                  </button>
+                </span>
+              )}
+            </p>
           </div>
           <Button 
             onClick={() => createTripMutation.mutate()}
