@@ -6,15 +6,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import Navigation from "@/components/Navigation";
 import TripCard from "@/components/TripCard";
+import UpgradePrompt from "@/components/UpgradePrompt";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import type { Trip } from "@shared/schema";
+import { useState } from "react";
 
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { forceSignOut, isAuthenticated, user } = useAuth();
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
 
   // Simple reset function that clears everything and redirects
   const handleEmergencyReset = () => {
@@ -51,6 +54,11 @@ export default function Dashboard() {
     retry: false,
   });
 
+  const { data: subscriptionInfo } = useQuery({
+    queryKey: ["/api/user/subscription"],
+    retry: false,
+  });
+
   const createTripMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/trips", {
@@ -62,18 +70,26 @@ export default function Dashboard() {
     },
     onSuccess: (newTrip) => {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/subscription"] });
       setLocation(`/trip-planning/${newTrip.id}`);
       toast({
         title: "Reise erstellt",
         description: "Deine neue Reise wurde erfolgreich erstellt.",
       });
     },
-    onError: () => {
-      toast({
-        title: "Fehler",
-        description: "Die Reise konnte nicht erstellt werden.",
-        variant: "destructive",
-      });
+    onError: (error: any) => {
+      console.error('Trip creation error:', error);
+      
+      // Check if it's a limit reached error
+      if (error.message?.includes('403') || error.message?.includes('Limit')) {
+        setShowUpgradePrompt(true);
+      } else {
+        toast({
+          title: "Fehler",
+          description: "Die Reise konnte nicht erstellt werden.",
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -257,6 +273,17 @@ export default function Dashboard() {
           </Card>
         )}
       </div>
+
+      {/* Upgrade Prompt */}
+      {subscriptionInfo && (
+        <UpgradePrompt
+          isOpen={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          currentPlan={subscriptionInfo.status}
+          tripsUsed={subscriptionInfo.tripsUsed}
+          tripsLimit={subscriptionInfo.tripsLimit}
+        />
+      )}
     </div>
   );
 }

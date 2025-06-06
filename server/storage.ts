@@ -26,6 +26,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sql } from "drizzle-orm";
+import { SUBSCRIPTION_LIMITS, type SubscriptionStatus, type SubscriptionInfo } from './types/subscription';
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -35,6 +36,12 @@ export interface IStorage {
   updateUserUsername(userId: string, username: string): Promise<User | undefined>;
   updateUserProfileImage(userId: string, profileImageUrl: string): Promise<User | undefined>;
   deleteUser(userId: string): Promise<boolean>;
+  
+  // Subscription operations
+  getUserSubscriptionStatus(userId: string): Promise<SubscriptionInfo>;
+  canCreateTrip(userId: string): Promise<{ allowed: boolean; reason?: string; currentPlan?: string }>;
+  canExportTrip(userId: string): Promise<boolean>;
+  updateUserSubscription(userId: string, subscriptionStatus: SubscriptionStatus, expiresAt?: string, stripeCustomerId?: string, stripeSubscriptionId?: string): Promise<User | undefined>;
   
   // Trip operations
   getTripsByUserId(userId: string): Promise<Trip[]>;
@@ -546,6 +553,69 @@ export class DatabaseStorage implements IStorage {
       console.error("🔴 Error deleting user:", error);
       throw error;
     }
+  }
+
+  // Subscription operations
+  async getUserSubscriptionStatus(userId: string): Promise<SubscriptionInfo> {
+    const user = await this.getUser(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    const userTrips = await this.getTripsByUserId(userId);
+    const subscriptionStatus: SubscriptionStatus = (user.subscriptionStatus as SubscriptionStatus) || 'free';
+    const limits = SUBSCRIPTION_LIMITS[subscriptionStatus];
+
+    // Check if subscription is expired
+    const now = new Date();
+    const isExpired = user.subscriptionExpiresAt && new Date(user.subscriptionExpiresAt) < now;
+    const effectiveStatus: SubscriptionStatus = isExpired ? 'free' : subscriptionStatus;
+    const effectiveLimits = SUBSCRIPTION_LIMITS[effectiveStatus];
+
+    return {
+      status: effectiveStatus,
+      expiresAt: user.subscriptionExpiresAt,
+      tripsUsed: userTrips.length,
+      tripsLimit: effectiveLimits.tripsLimit,
+      canExport: effectiveLimits.canExport,
+      stripeCustomerId: user.stripeCustomerId,
+      stripeSubscriptionId: user.stripeSubscriptionId,
+    };
+  }
+
+  async canCreateTrip(userId: string): Promise<{ allowed: boolean; reason?: string; currentPlan?: string }> {
+    const subscriptionInfo = await this.getUserSubscriptionStatus(userId);
+    
+    if (subscriptionInfo.tripsUsed >= subscriptionInfo.tripsLimit) {
+      return {
+        allowed: false,
+        reason: `Sie haben das Limit von ${subscriptionInfo.tripsLimit} Reisen für den ${subscriptionInfo.status.toUpperCase()} Plan erreicht.`,
+        currentPlan: subscriptionInfo.status,
+      };
+    }
+
+    return { allowed: true };
+  }
+
+  async canExportTrip(userId: string): Promise<boolean> {
+    const subscriptionInfo = await this.getUserSubscriptionStatus(userId);
+    return subscriptionInfo.canExport;
+  }
+
+  async updateUserSubscription(userId: string, subscriptionStatus: SubscriptionStatus, expiresAt?: string, stripeCustomerId?: string, stripeSubscriptionId?: string): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        subscriptionStatus,
+        subscriptionExpiresAt: expiresAt,
+        stripeCustomerId,
+        stripeSubscriptionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    return updatedUser;
   }
 }
 

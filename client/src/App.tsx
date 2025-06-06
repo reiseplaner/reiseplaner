@@ -10,6 +10,7 @@ import TripPlanning from "@/pages/TripPlanning";
 import Community from "@/pages/Community";
 import PublicTripDetail from "@/pages/PublicTripDetail";
 import Profile from "@/pages/Profile";
+import PricingPage from "@/pages/PricingPage";
 import UsernameSetup from "@/components/UsernameSetup";
 import NotFound from "@/pages/not-found";
 import { useState } from "react";
@@ -63,6 +64,7 @@ function Router() {
           <Route path="/trip-planning/:id" component={TripPlanning} />
           <Route path="/community" component={Community} />
           <Route path="/profile" component={Profile} />
+          <Route path="/pricing" component={PricingPage} />
         </>
       )}
       <Route component={NotFound} />

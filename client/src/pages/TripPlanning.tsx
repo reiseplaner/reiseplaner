@@ -18,7 +18,7 @@ import RestaurantList from "@/components/RestaurantList";
 import TripCalendar from "@/components/TripCalendar";
 import ShareTripDialog from "@/components/ShareTripDialog";
 import { apiRequest } from "@/lib/queryClient";
-import { exportTripToPDF, exportTripToCSV } from "@/lib/exportUtils";
+import { exportTripToPDF, exportTripToCSV, exportTripToExcel, exportTripToGoogleSheets } from "@/lib/exportUtils";
 import { insertTripSchema, type TripWithDetails } from "@shared/schema";
 import { z } from "zod";
 
@@ -216,6 +216,26 @@ export default function TripPlanning() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (actualTrip) {
+      exportTripToExcel(actualTrip);
+      toast({
+        title: "Excel exportiert",
+        description: "Der Reiseplan wurde als Excel-Datei heruntergeladen.",
+      });
+    }
+  };
+
+  const handleExportGoogleSheets = () => {
+    if (actualTrip) {
+      exportTripToGoogleSheets(actualTrip);
+      toast({
+        title: "Google Sheets Export",
+        description: "CSV-Datei für Google Sheets erstellt. Folgen Sie den Anweisungen zum Importieren.",
+      });
+    }
+  };
+
   const onSubmit = (data: z.infer<typeof generalDataSchema>) => {
     updateTripMutation.mutate(data);
   };
@@ -289,6 +309,14 @@ export default function TripPlanning() {
             <Button variant="outline" onClick={handleExportCSV}>
               <Download className="h-4 w-4 mr-2" />
               CSV
+            </Button>
+            <Button variant="outline" onClick={handleExportExcel}>
+              <Download className="h-4 w-4 mr-2" />
+              Excel
+            </Button>
+            <Button variant="outline" onClick={handleExportGoogleSheets}>
+              <Download className="h-4 w-4 mr-2" />
+              Google Sheets
             </Button>
             <ShareTripDialog 
               tripId={actualTrip.id} 

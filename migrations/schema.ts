@@ -93,9 +93,17 @@ export const trips = pgTable("trips", {
 export const users = pgTable("users", {
 	id: varchar().primaryKey().notNull(),
 	email: varchar(),
+	username: varchar(),
 	firstName: varchar("first_name"),
 	lastName: varchar("last_name"),
 	profileImageUrl: varchar("profile_image_url"),
+	
+	// Subscription fields for pricing system
+	subscriptionStatus: varchar("subscription_status").default('free'), // 'free', 'pro', 'veteran'
+	subscriptionExpiresAt: timestamp("subscription_expires_at", { mode: 'string' }),
+	stripeCustomerId: varchar("stripe_customer_id"),
+	stripeSubscriptionId: varchar("stripe_subscription_id"),
+	
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow(),
 }, (table) => [

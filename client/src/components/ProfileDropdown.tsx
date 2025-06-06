@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -11,18 +12,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { 
   User, 
   Settings, 
   LogOut, 
   Crown,
-  ChevronDown
+  ChevronDown,
+  Sparkles
 } from "lucide-react";
+
+interface SubscriptionInfo {
+  status: 'free' | 'pro' | 'veteran';
+  tripsUsed: number;
+  tripsLimit: number;
+  canExport: boolean;
+}
 
 export default function ProfileDropdown() {
   const { user, dbUser, signOut } = useAuth();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+
+  const { data: subscriptionInfo } = useQuery<SubscriptionInfo>({
+    queryKey: ["/api/user/subscription"],
+    retry: false,
+  });
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     const first = firstName?.charAt(0) || "";
@@ -32,6 +47,11 @@ export default function ProfileDropdown() {
 
   const handleProfileClick = () => {
     setLocation("/profile");
+    setIsOpen(false);
+  };
+
+  const handleUpgradeClick = () => {
+    setLocation("/pricing");
     setIsOpen(false);
   };
 
@@ -88,6 +108,20 @@ export default function ProfileDropdown() {
                 @{dbUser.username}
               </p>
             )}
+            {subscriptionInfo && (
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant={subscriptionInfo.status === 'free' ? 'outline' : 'default'} className="text-xs">
+                  {subscriptionInfo.status === 'free' && <Sparkles className="w-3 h-3 mr-1" />}
+                  {subscriptionInfo.status === 'pro' && <Crown className="w-3 h-3 mr-1" />}
+                  {subscriptionInfo.status === 'veteran' && <Crown className="w-3 h-3 mr-1" />}
+                  {subscriptionInfo.status === 'free' ? 'Standard' : 
+                   subscriptionInfo.status === 'pro' ? 'Pro Plan' : 'Veteran Plan'}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {subscriptionInfo.tripsUsed}/{subscriptionInfo.tripsLimit === Infinity ? '∞' : subscriptionInfo.tripsLimit} Reisen
+                </span>
+              </div>
+            )}
           </div>
         </DropdownMenuLabel>
         
@@ -103,10 +137,12 @@ export default function ProfileDropdown() {
           <span>Einstellungen</span>
         </DropdownMenuItem>
         
-        <DropdownMenuItem className="cursor-pointer">
-          <Crown className="mr-2 h-4 w-4" />
-          <span>Upgrade zu Premium</span>
-        </DropdownMenuItem>
+        {subscriptionInfo?.status === 'free' && (
+          <DropdownMenuItem onClick={handleUpgradeClick} className="cursor-pointer">
+            <Crown className="mr-2 h-4 w-4" />
+            <span>Upgrade zu Premium</span>
+          </DropdownMenuItem>
+        )}
         
         <DropdownMenuSeparator />
         

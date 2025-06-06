@@ -16,6 +16,8 @@ import { db } from "./db";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { checkTripLimit, checkExportPermission } from './middleware/subscription';
+import { SUBSCRIPTION_PLANS, STRIPE_PRICE_IDS } from './types/subscription';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -263,6 +265,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Subscription routes
+  app.get('/api/user/subscription', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const subscriptionInfo = await storage.getUserSubscriptionStatus(userId);
+      
+      res.json(subscriptionInfo);
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  app.get('/api/subscription/plans', async (req, res) => {
+    try {
+      res.json(SUBSCRIPTION_PLANS);
+    } catch (error) {
+      console.error('Error fetching subscription plans:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // Stripe checkout session creation
+  app.post('/api/subscription/create-checkout', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { planId } = req.body;
+      
+      if (!planId || !['pro', 'veteran'].includes(planId)) {
+        return res.status(400).json({ message: 'Invalid plan ID' });
+      }
+      
+      // For now, return a mock checkout URL
+      // TODO: Implement actual Stripe integration
+      const checkoutUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/pricing?plan=${planId}&success=mock`;
+      
+      res.json({ 
+        checkoutUrl,
+        mock: true,
+        message: 'Mock checkout URL - real Stripe integration pending'
+      });
+    } catch (error) {
+      console.error('Error creating checkout session:', error);
+      res.status(500).json({ message: 'Failed to create checkout session' });
+    }
+  });
+
+  // Export permission check (for future PDF export feature)
+  app.get('/api/user/can-export', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const canExport = await storage.canExportTrip(userId);
+      
+      res.json({ canExport });
+    } catch (error) {
+      console.error('Error checking export permission:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // Trip routes
   app.get('/api/trips', supabaseAuth, async (req: any, res) => {
     try {
@@ -308,7 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/trips', supabaseAuth, async (req: any, res) => {
+  app.post('/api/trips', supabaseAuth, checkTripLimit, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const tripData = insertTripSchema.parse({ ...req.body, userId });
