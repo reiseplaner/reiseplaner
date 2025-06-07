@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/Navigation";
-import { Heart } from "lucide-react";
+import { Heart, MapPin, Calendar, Users, Plane, Mountain, Building } from "lucide-react";
 import type { Trip } from "@shared/schema";
 
 // Extended trip type with upvote count
@@ -63,15 +63,22 @@ export default function Community() {
     },
   });
 
-  const getDestinationImage = (destination: string) => {
-    // Map destinations to appropriate stock images
-    const imageMap: { [key: string]: string } = {
-      "DPS": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Bali
-      "NRT": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Japan
-      "KEF": "https://images.unsplash.com/photo-1682686581264-c47e25e61d95?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Iceland
-      "ATH": "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Greece
+  const getDestinationInfo = (destination: string) => {
+    const destinationMap: { [key: string]: { icon: any } } = {
+      "DPS": { icon: Mountain }, // Bali
+      "NRT": { icon: Mountain }, // Japan
+      "KEF": { icon: Mountain }, // Iceland
+      "ATH": { icon: Building }, // Greece
+      "CDG": { icon: Building }, // Paris
+      "NYC": { icon: Building }, // New York
+      "LON": { icon: Building }, // London
+      "ROM": { icon: Building }, // Rom
+      "BCN": { icon: Building }, // Barcelona
+      "AMS": { icon: Building }, // Amsterdam
     };
-    return imageMap[destination || ""] || "https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200";
+    
+    const defaultDestination = { icon: Plane };
+    return destinationMap[destination || ""] || defaultDestination;
   };
 
   const handleTripClick = (trip: TripWithUpvotes) => {
@@ -195,63 +202,96 @@ export default function Community() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {publicTrips.map((trip) => (
-              <Card 
-                key={trip.id} 
-                className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => handleTripClick(trip)}
-              >
-                <img 
-                  src={getDestinationImage(trip.destination || "")}
-                  alt="Travel destination" 
-                  className="w-full h-48 object-cover" 
-                />
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-slate-900">{trip.name}</h3>
-                    <div className="flex items-center text-sm text-slate-500">
-                      <Heart className="h-4 w-4 mr-1" />
-                      <span>{trip.upvoteCount || 0}</span>
+            {publicTrips.map((trip) => {
+              const destinationInfo = getDestinationInfo(trip.destination || "");
+              const IconComponent = destinationInfo.icon;
+              
+              return (
+                <Card 
+                  key={trip.id} 
+                  className="group hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden border-0 bg-white/80 backdrop-blur-sm"
+                  onClick={() => handleTripClick(trip)}
+                >
+                  <CardContent className="p-6 relative">
+                    {/* Header mit Icon und Destination */}
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-2 bg-slate-100 rounded-lg">
+                          <IconComponent className="h-6 w-6 text-gray-700" />
+                        </div>
+                        {trip.destination && (
+                          <div className="text-gray-700 font-medium bg-slate-100 px-3 py-1 rounded-full text-sm">
+                            {trip.destination}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center text-sm text-slate-500">
+                        <Heart className="h-4 w-4 mr-1" />
+                        <span>{trip.upvoteCount || 0}</span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {trip.description && (
-                    <p className="text-sm text-slate-600 mb-3 line-clamp-2">{trip.description}</p>
-                  )}
-                  
-                  <div className="flex justify-between items-center text-sm text-slate-500 mb-4">
-                    <span>{trip.destination || "Unbekannt"}</span>
-                    {trip.totalBudget && (
-                      <span>€{parseFloat(trip.totalBudget).toLocaleString()}</span>
+
+                    {/* Trip Name */}
+                    <div className="mb-3">
+                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-blue-600 group-hover:bg-clip-text transition-all duration-300">
+                        {trip.name}
+                      </h3>
+                    </div>
+                    
+                    {trip.description && (
+                      <p className="text-sm text-slate-600 mb-4 line-clamp-2">{trip.description}</p>
                     )}
-                    <span>{trip.travelers} Personen</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div className="w-8 h-8 bg-slate-300 rounded-full mr-2"></div>
-                      <span className="text-sm text-slate-600">
-                        {trip.user?.username || 
-                         (trip.user?.firstName && trip.user?.lastName ? 
-                           `${trip.user.firstName} ${trip.user.lastName}` : 
-                           "Anonymer Benutzer")}
-                      </span>
+                    
+                    {/* Trip Details */}
+                    <div className="grid grid-cols-1 gap-2 text-sm text-gray-600 mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="p-1.5 bg-purple-100 rounded-lg">
+                          <Users className="h-4 w-4 text-purple-600" />
+                        </div>
+                        <span className="font-medium">{trip.travelers} Personen</span>
+                      </div>
+                      
+                      {trip.totalBudget && (
+                        <div className="flex items-center space-x-3">
+                          <div className="p-1.5 bg-emerald-100 rounded-lg">
+                            <span className="text-emerald-600 font-bold text-xs">€</span>
+                          </div>
+                          <span className="font-medium">€{parseFloat(trip.totalBudget).toLocaleString()}</span>
+                        </div>
+                      )}
                     </div>
-                    <Button 
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click when copying
-                        copyTripMutation.mutate(trip);
-                      }}
-                      disabled={copyTripMutation.isPending}
-                      className="bg-primary text-white hover:bg-primary/90"
-                    >
-                      Kopieren
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    
+                    {/* Author und Action */}
+                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full mr-2 flex items-center justify-center">
+                          <span className="text-white text-xs font-semibold">
+                            {(trip.user?.username?.[0] || trip.user?.firstName?.[0] || "A").toUpperCase()}
+                          </span>
+                        </div>
+                        <span className="text-sm text-slate-600">
+                          {trip.user?.username || 
+                           (trip.user?.firstName && trip.user?.lastName ? 
+                             `${trip.user.firstName} ${trip.user.lastName}` : 
+                             "Anonymer Benutzer")}
+                        </span>
+                      </div>
+                      <Button 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          copyTripMutation.mutate(trip);
+                        }}
+                        disabled={copyTripMutation.isPending}
+                        className="bg-primary text-white hover:bg-primary/90"
+                      >
+                        Kopieren
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>

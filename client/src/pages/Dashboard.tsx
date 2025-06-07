@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Compass, LogOut } from "lucide-react";
+import { Plus, Compass, LogOut, Plane, Mountain, Building, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -244,31 +244,65 @@ export default function Dashboard() {
                 </Button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {publicTrips.slice(0, 3).map((trip) => (
-                  <div key={trip.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <img 
-                      src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&h=150" 
-                      alt="Travel destination" 
-                      className="w-full h-24 object-cover rounded mb-3" 
-                    />
-                    <h4 className="font-semibold text-slate-900 mb-1">{trip.name}</h4>
-                    <p className="text-sm text-slate-600 mb-2">
-                      {trip.destination} • {trip.travelers} Personen
-                    </p>
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="text-slate-500">Öffentlicher Plan</span>
-                      <Button 
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => copyTripMutation.mutate(trip)}
-                        disabled={copyTripMutation.isPending}
-                        className="text-primary hover:text-primary/90"
-                      >
-                        Kopieren
-                      </Button>
+                {publicTrips.slice(0, 3).map((trip) => {
+                  const getDestinationIcon = (destination: string) => {
+                    const destinationMap: { [key: string]: any } = {
+                      "DPS": Mountain, // Bali
+                      "NRT": Mountain, // Japan
+                      "KEF": Mountain, // Iceland
+                      "ATH": Building, // Greece
+                      "CDG": Building, // Paris
+                      "NYC": Building, // New York
+                      "LON": Building, // London
+                      "ROM": Building, // Rom
+                      "BCN": Building, // Barcelona
+                      "AMS": Building, // Amsterdam
+                    };
+                    return destinationMap[destination || ""] || Plane;
+                  };
+
+                  const IconComponent = getDestinationIcon(trip.destination || "");
+
+                  return (
+                    <div key={trip.id} className="group border border-slate-200 rounded-lg p-4 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 bg-white/80 backdrop-blur-sm">
+                      {/* Header mit Icon */}
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="p-2 bg-slate-100 rounded-lg">
+                          <IconComponent className="h-5 w-5 text-gray-700" />
+                        </div>
+                        {trip.destination && (
+                          <div className="text-gray-700 font-medium bg-slate-100 px-2 py-1 rounded-full text-xs">
+                            {trip.destination}
+                          </div>
+                        )}
+                      </div>
+
+                      <h4 className="font-semibold text-slate-900 mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-blue-600 group-hover:bg-clip-text transition-all duration-300">
+                        {trip.name}
+                      </h4>
+                      
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="p-1 bg-purple-100 rounded">
+                          <Users className="h-3 w-3 text-purple-600" />
+                        </div>
+                        <span className="text-sm text-slate-600">{trip.travelers} Personen</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-xs pt-3 border-t border-gray-100">
+                        <span className="text-slate-500 bg-slate-50 px-2 py-1 rounded-full">Öffentlicher Plan</span>
+                        <Button 
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => copyTripMutation.mutate(trip)}
+                          disabled={copyTripMutation.isPending}
+                          className="text-primary hover:text-primary/90"
+                        >
+                          Kopieren
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

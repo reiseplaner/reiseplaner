@@ -1,4 +1,4 @@
-import { Edit, Trash2, MapPin, Calendar, Users, Euro } from "lucide-react";
+import { Edit, Trash2, MapPin, Calendar, Users, Euro, Plane, Mountain, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
@@ -56,13 +56,20 @@ export default function TripCard({ trip }: TripCardProps) {
     },
   });
 
-  const getDestinationImage = (destination: string) => {
-    const imageMap: { [key: string]: string } = {
-      "DPS": "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Bali
-      "NRT": "https://images.unsplash.com/photo-1545569341-9eb8b30979d9?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Japan
-      "CDG": "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200", // Paris
+  const getDestinationInfo = (destination: string) => {
+    const destinationMap: { [key: string]: { icon: any } } = {
+      "DPS": { icon: Mountain }, // Bali
+      "NRT": { icon: Mountain }, // Japan
+      "CDG": { icon: Building }, // Paris
+      "NYC": { icon: Building }, // New York
+      "LON": { icon: Building }, // London
+      "ROM": { icon: Building }, // Rom
+      "BCN": { icon: Building }, // Barcelona
+      "AMS": { icon: Building }, // Amsterdam
     };
-    return imageMap[destination || ""] || "https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&h=200";
+    
+    const defaultDestination = { icon: Plane };
+    return destinationMap[destination || ""] || defaultDestination;
   };
 
   const formatDateRange = () => {
@@ -129,105 +136,130 @@ export default function TripCard({ trip }: TripCardProps) {
   };
 
   const budgetInfo = calculateBudgetInfo();
+  const destinationInfo = getDestinationInfo(trip.destination || "");
+  const IconComponent = destinationInfo.icon;
 
   return (
-    <Card className="group hover:shadow-lg transition-all duration-200 cursor-pointer">
+    <Card className="group hover:shadow-xl hover:scale-[1.02] transition-all duration-300 cursor-pointer overflow-hidden border-0 bg-white/80 backdrop-blur-sm">
       <div onClick={() => setLocation(`/trip-planning/${trip.id}`)}>
-        <img 
-          src={getDestinationImage(trip.destination || "")}
-          alt="Travel destination" 
-          className="w-full h-32 object-cover rounded-t-lg" 
-        />
-        <CardContent className="p-6">
-          <div className="flex justify-between items-start mb-3">
-            <h3 className="text-lg font-semibold text-slate-900 group-hover:text-primary transition-colors">
+        <CardContent className="p-6 relative">
+          {/* Action Buttons */}
+          <div className="absolute top-4 right-4 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                setLocation(`/trip-planning/${trip.id}`);
+              }}
+            >
+              <Edit className="h-4 w-4" />
+            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-red-600 hover:text-red-700"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Reise löschen</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Bist du sicher, dass du die Reise "{trip.name}" löschen möchtest? 
+                    Diese Aktion kann nicht rückgängig gemacht werden.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={() => deleteTripMutation.mutate()}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Löschen
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+
+          {/* Trip Name */}
+          <div className="mb-4">
+            <h3 className="text-xl font-bold text-gray-900 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-blue-600 group-hover:bg-clip-text transition-all duration-300">
               {trip.name}
             </h3>
-            <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setLocation(`/trip-planning/${trip.id}`);
-                }}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={(e) => e.stopPropagation()}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Reise löschen</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Bist du sicher, dass du die Reise "{trip.name}" löschen möchtest? 
-                      Diese Aktion kann nicht rückgängig gemacht werden.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Abbrechen</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={() => deleteTripMutation.mutate()}
-                      className="bg-red-600 hover:bg-red-700"
-                    >
-                      Löschen
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
           </div>
           
-          <div className="space-y-2 text-sm text-slate-600 mb-4">
-            <div className="flex items-center">
-              <Calendar className="h-4 w-4 mr-2" />
-              <span>{formatDateRange()}</span>
+          {/* Trip Details */}
+          <div className="grid grid-cols-1 gap-3 text-sm text-gray-600 mb-6">
+            <div className="flex items-center space-x-3">
+              <div className="p-1.5 bg-blue-100 rounded-lg">
+                <Calendar className="h-4 w-4 text-blue-600" />
+              </div>
+              <span className="font-medium">{formatDateRange()}</span>
             </div>
-            <div className="flex items-center">
-              <Users className="h-4 w-4 mr-2" />
-              <span>{trip.travelers} Personen</span>
+            
+            <div className="flex items-center space-x-3">
+              <div className="p-1.5 bg-purple-100 rounded-lg">
+                <Users className="h-4 w-4 text-purple-600" />
+              </div>
+              <span className="font-medium">{trip.travelers} Personen</span>
             </div>
+            
             {trip.departure && trip.destination && (
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-2" />
-                <span>{trip.departure} → {trip.destination}</span>
+              <div className="flex items-center space-x-3">
+                <div className="p-1.5 bg-green-100 rounded-lg">
+                  <MapPin className="h-4 w-4 text-green-600" />
+                </div>
+                <span className="font-medium">{trip.departure} → {trip.destination}</span>
               </div>
             )}
           </div>
           
-          <div className="space-y-2 text-sm mb-3">
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600 flex items-center">
-                <Euro className="h-4 w-4 mr-1" />
-                Gesamtbudget: <span className="font-semibold text-slate-900 ml-1">
-                  {budgetInfo.totalBudget > 0 ? `€${budgetInfo.totalBudget.toLocaleString()}` : "Nicht festgelegt"}
-                </span>
+          {/* Budget Section - Moderneres Design */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="p-1.5 bg-emerald-100 rounded-lg">
+                  <Euro className="h-4 w-4 text-emerald-600" />
+                </div>
+                <span className="text-sm font-medium text-gray-700">Gesamtbudget</span>
+              </div>
+              <span className="font-bold text-lg text-gray-900">
+                {budgetInfo.totalBudget > 0 ? `€${budgetInfo.totalBudget.toLocaleString()}` : "Nicht festgelegt"}
               </span>
             </div>
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-red-600 font-semibold">
-                Verplant: €{budgetInfo.plannedBudget.toLocaleString()}
-              </span>
-              <span className="text-green-600 font-semibold">
-                Verbleibend: €{budgetInfo.remainingBudget.toLocaleString()}
-              </span>
-            </div>
-          </div>
-          
-          <div className="w-full bg-green-200 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-red-500 to-red-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${budgetInfo.percentage}%` }}
-            ></div>
+            
+            {budgetInfo.totalBudget > 0 && (
+              <>
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-red-600 font-semibold bg-red-50 px-2 py-1 rounded-full">
+                    Verplant: €{budgetInfo.plannedBudget.toLocaleString()}
+                  </span>
+                  <span className="text-emerald-600 font-semibold bg-emerald-50 px-2 py-1 rounded-full">
+                    Verbleibend: €{budgetInfo.remainingBudget.toLocaleString()}
+                  </span>
+                </div>
+                
+                {/* Moderner Progress Bar */}
+                <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-500 bg-gradient-to-r ${
+                      budgetInfo.percentage > 80 
+                        ? 'from-red-400 to-red-500' 
+                        : budgetInfo.percentage > 60 
+                        ? 'from-yellow-400 to-orange-500' 
+                        : 'from-green-400 to-emerald-500'
+                    }`}
+                    style={{ width: `${budgetInfo.percentage}%` }}
+                  ></div>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </div>
