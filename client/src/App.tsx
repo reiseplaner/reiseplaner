@@ -11,8 +11,13 @@ import Community from "@/pages/Community";
 import PublicTripDetail from "@/pages/PublicTripDetail";
 import Profile from "@/pages/Profile";
 import PricingPage from "@/pages/PricingPage";
+import Impressum from "@/pages/Impressum";
+import Datenschutz from "@/pages/Datenschutz";
+import CookieEinstellungen from "@/pages/CookieEinstellungen";
 import UsernameSetup from "@/components/UsernameSetup";
 import NotFound from "@/pages/not-found";
+import { CookieProvider } from "@/contexts/CookieContext";
+import CookieBanner from "@/components/CookieBanner";
 import { useState } from "react";
 
 function Router() {
@@ -52,33 +57,43 @@ function Router() {
   console.log('🔍 Showing main routes, authenticated:', isAuthenticated);
 
   return (
-    <Switch>
-      {/* Public routes - accessible to everyone */}
-      <Route path="/community/:slug" component={PublicTripDetail} />
+    <>
+      <Switch>
+        {/* Public routes - accessible to everyone */}
+        <Route path="/community/:slug" component={PublicTripDetail} />
+        <Route path="/impressum" component={Impressum} />
+        <Route path="/datenschutz" component={Datenschutz} />
+        <Route path="/cookie-einstellungen" component={CookieEinstellungen} />
+        
+        {!isAuthenticated ? (
+          <Route path="/" component={Landing} />
+        ) : (
+          <>
+            <Route path="/" component={Dashboard} />
+            <Route path="/trip-planning/:id" component={TripPlanning} />
+            <Route path="/community" component={Community} />
+            <Route path="/profile" component={Profile} />
+            <Route path="/pricing" component={PricingPage} />
+          </>
+        )}
+        <Route component={NotFound} />
+      </Switch>
       
-      {!isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
-        <>
-          <Route path="/" component={Dashboard} />
-          <Route path="/trip-planning/:id" component={TripPlanning} />
-          <Route path="/community" component={Community} />
-          <Route path="/profile" component={Profile} />
-          <Route path="/pricing" component={PricingPage} />
-        </>
-      )}
-      <Route component={NotFound} />
-    </Switch>
+      {/* Cookie Banner */}
+      <CookieBanner />
+    </>
   );
 }
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Router />
-      </TooltipProvider>
+      <CookieProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Router />
+        </TooltipProvider>
+      </CookieProvider>
     </QueryClientProvider>
   );
 }

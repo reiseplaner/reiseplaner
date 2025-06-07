@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import Footer from "@/components/Footer";
 
 export default function Landing() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
@@ -311,6 +312,9 @@ export default function Landing() {
           </Card>
         </div>
       )}
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

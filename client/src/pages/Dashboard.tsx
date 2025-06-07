@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import Navigation from "@/components/Navigation";
 import TripCard from "@/components/TripCard";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import Footer from "@/components/Footer";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import type { Trip } from "@shared/schema";
@@ -284,6 +285,9 @@ export default function Dashboard() {
           tripsLimit={subscriptionInfo.tripsLimit}
         />
       )}
+      
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
