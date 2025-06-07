@@ -8,17 +8,11 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/Navigation";
 import { Heart, MapPin, Calendar, Users, Plane, Mountain, Building } from "lucide-react";
-import type { Trip } from "@shared/schema";
+import type { Trip, PublicTripWithUser } from "@shared/schema";
 
 // Extended trip type with upvote count
-type TripWithUpvotes = Trip & { 
+type TripWithUpvotes = PublicTripWithUser & { 
   upvoteCount: number;
-  user?: {
-    id: string;
-    username: string | null;
-    firstName: string | null;
-    lastName: string | null;
-  };
 };
 
 export default function Community() {
@@ -36,7 +30,17 @@ export default function Community() {
     queryKey: ["/api/public/trips"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/public/trips");
-      return response.json() as Promise<TripWithUpvotes[]>;
+      const data = await response.json() as TripWithUpvotes[];
+      console.log("🔍 Community: Loaded trips:", data.length);
+      data.forEach((trip, index) => {
+        console.log(`🔍 Trip ${index}:`, trip.name);
+        console.log(`🔍 - budgetItems:`, trip.budgetItems);
+        console.log(`🔍 - budgetItems length:`, trip.budgetItems?.length);
+        if (trip.budgetItems && trip.budgetItems.length > 0) {
+          console.log(`🔍 - first budget item:`, trip.budgetItems[0]);
+        }
+      });
+      return data;
     },
   });
 
@@ -73,64 +77,209 @@ export default function Community() {
   // Destination region mapping
   const getDestinationRegion = (destination: string): string => {
     const regionMap: { [key: string]: string } = {
-      // Asien
-      "DPS": "asia", // Bali, Indonesien
-      "NRT": "asia", // Tokyo, Japan
-      "ICN": "asia", // Seoul, Südkorea
-      "PVG": "asia", // Shanghai, China
+      // EUROPA
+      "LHR": "europe", "LGW": "europe", "STN": "europe", "LTN": "europe", // London
+      "CDG": "europe", "ORY": "europe", // Paris
+      "FRA": "europe", // Frankfurt
+      "AMS": "europe", // Amsterdam
+      "MAD": "europe", // Madrid
+      "BCN": "europe", // Barcelona
+      "FCO": "europe", "CIA": "europe", // Rom
+      "MXP": "europe", "LIN": "europe", // Mailand
+      "VCE": "europe", // Venedig
+      "NAP": "europe", // Neapel
+      "MUC": "europe", // München
+      "BER": "europe", // Berlin
+      "DUS": "europe", "CGN": "europe", // Düsseldorf, Köln
+      "HAM": "europe", // Hamburg
+      "STR": "europe", // Stuttgart
+      "VIE": "europe", // Wien
+      "ZUR": "europe", "BSL": "europe", "GVA": "europe", // Schweiz
+      "BRU": "europe", // Brüssel
+      "CPH": "europe", // Kopenhagen
+      "ARN": "europe", // Stockholm
+      "OSL": "europe", // Oslo
+      "HEL": "europe", // Helsinki
+      "WAW": "europe", // Warschau
+      "PRG": "europe", // Prag
+      "BUD": "europe", // Budapest
+      "ATH": "europe", // Athen
+      "DUB": "europe", // Dublin
+      "EDI": "europe", "GLA": "europe", // Edinburgh, Glasgow
+      "MAN": "europe", // Manchester
+      "LIS": "europe", // Lissabon
+      "OPO": "europe", // Porto
+      "KEF": "europe", // Reykjavik
+      "RIX": "europe", // Riga
+      "TLL": "europe", // Tallinn
+      "VNO": "europe", // Vilnius
+      "SOF": "europe", // Sofia
+      "OTP": "europe", // Bukarest
+      "BEG": "europe", // Belgrad
+      "ZAG": "europe", // Zagreb
+      "LJU": "europe", // Ljubljana
+      "SKP": "europe", // Skopje
+      "TIA": "europe", // Tirana
+      "SPU": "europe", "DBV": "europe", // Split, Dubrovnik
+
+      // ASIEN
+      "NRT": "asia", "HND": "asia", // Tokyo
+      "ICN": "asia", // Seoul
+      "PVG": "asia", "SHA": "asia", // Shanghai
+      "PEK": "asia", "PKX": "asia", // Peking
+      "CAN": "asia", // Guangzhou
+      "SZX": "asia", // Shenzhen
       "HKG": "asia", // Hong Kong
+      "TPE": "asia", // Taipei
       "SIN": "asia", // Singapur
-      "BKK": "asia", // Bangkok, Thailand
-      "KUL": "asia", // Kuala Lumpur, Malaysia
-      "CGK": "asia", // Jakarta, Indonesien
-      "MNL": "asia", // Manila, Philippinen
-      "DEL": "asia", // Delhi, Indien
-      "BOM": "asia", // Mumbai, Indien
-      
-      // Europa
-      "ATH": "europe", // Athen, Griechenland
-      "CDG": "europe", // Paris, Frankreich
-      "LON": "europe", // London, UK
-      "LHR": "europe", // London Heathrow, UK
-      "ROM": "europe", // Rom, Italien
-      "FCO": "europe", // Rom Fiumicino, Italien
-      "BCN": "europe", // Barcelona, Spanien
-      "MAD": "europe", // Madrid, Spanien
-      "AMS": "europe", // Amsterdam, Niederlande
-      "FRA": "europe", // Frankfurt, Deutschland
-      "MUC": "europe", // München, Deutschland
-      "BER": "europe", // Berlin, Deutschland
-      "VIE": "europe", // Wien, Österreich
-      "ZUR": "europe", // Zürich, Schweiz
-      "KEF": "europe", // Reykjavik, Island
-      "CPH": "europe", // Kopenhagen, Dänemark
-      "STO": "europe", // Stockholm, Schweden
-      "OSL": "europe", // Oslo, Norwegen
-      "HEL": "europe", // Helsinki, Finnland
-      "WAW": "europe", // Warschau, Polen
-      "PRG": "europe", // Prag, Tschechien
-      "BUD": "europe", // Budapest, Ungarn
-      
-      // Amerika
-      "NYC": "america", // New York, USA
-      "JFK": "america", // New York JFK, USA
-      "LGA": "america", // New York LaGuardia, USA
-      "LAX": "america", // Los Angeles, USA
-      "SFO": "america", // San Francisco, USA
-      "CHI": "america", // Chicago, USA
-      "MIA": "america", // Miami, USA
-      "LAS": "america", // Las Vegas, USA
-      "DEN": "america", // Denver, USA
-      "SEA": "america", // Seattle, USA
-      "YVR": "america", // Vancouver, Kanada
-      "YYZ": "america", // Toronto, Kanada
-      "MEX": "america", // Mexiko Stadt, Mexiko
-      "GRU": "america", // São Paulo, Brasilien
-      "GIG": "america", // Rio de Janeiro, Brasilien
-      "EZE": "america", // Buenos Aires, Argentinien
-      "SCL": "america", // Santiago, Chile
-      "LIM": "america", // Lima, Peru
-      "BOG": "america", // Bogotá, Kolumbien
+      "BKK": "asia", "DMK": "asia", // Bangkok
+      "KUL": "asia", // Kuala Lumpur
+      "CGK": "asia", // Jakarta
+      "DPS": "asia", // Bali
+      "MNL": "asia", // Manila
+      "DEL": "asia", // Delhi
+      "BOM": "asia", // Mumbai
+      "BLR": "asia", // Bangalore
+      "MAA": "asia", // Chennai
+      "CCU": "asia", // Kolkata
+      "HYD": "asia", // Hyderabad
+      "AMD": "asia", // Ahmedabad
+      "COK": "asia", // Kochi
+      "GOI": "asia", // Goa
+      "KTM": "asia", // Kathmandu
+      "CMB": "asia", // Colombo
+      "RGN": "asia", // Yangon
+      "VTE": "asia", // Vientiane
+      "PNH": "asia", // Phnom Penh
+      "SGN": "asia", "HAN": "asia", // Ho Chi Minh, Hanoi
+      "FUK": "asia", "KIX": "asia", "NGO": "asia", // Japan
+      "PUS": "asia", // Busan
+      "TSN": "asia", "XIY": "asia", "CTU": "asia", // China
+      "ULN": "asia", // Ulaanbaatar
+      "TAS": "asia", // Taschkent
+      "ALA": "asia", // Almaty
+      "FRU": "asia", // Bischkek
+      "DYU": "asia", // Duschanbe
+      "ASB": "asia", // Aschgabat
+
+      // AMERIKA
+      "JFK": "america", "LGA": "america", "EWR": "america", // New York
+      "LAX": "america", // Los Angeles
+      "SFO": "america", "OAK": "america", "SJC": "america", // San Francisco Bay
+      "ORD": "america", "MDW": "america", // Chicago
+      "MIA": "america", "FLL": "america", // Miami, Fort Lauderdale
+      "LAS": "america", // Las Vegas
+      "DEN": "america", // Denver
+      "SEA": "america", // Seattle
+      "ATL": "america", // Atlanta
+      "DFW": "america", "DAL": "america", // Dallas
+      "IAH": "america", "HOU": "america", // Houston
+      "PHX": "america", // Phoenix
+      "CLT": "america", // Charlotte
+      "MSP": "america", // Minneapolis
+      "DTW": "america", // Detroit
+      "BOS": "america", "PWM": "america", // Boston
+      "BWI": "america", "DCA": "america", "IAD": "america", // Washington DC
+      "YYZ": "america", "YYC": "america", "YVR": "america", // Kanada
+      "YUL": "america", "YQB": "america", // Montreal, Quebec
+      "YOW": "america", // Ottawa
+      "YHZ": "america", // Halifax
+      "MEX": "america", // Mexiko-Stadt
+      "CUN": "america", // Cancún
+      "GDL": "america", // Guadalajara
+      "PVR": "america", // Puerto Vallarta
+      "SJO": "america", // San José, Costa Rica
+      "PTY": "america", // Panama City
+      "GUA": "america", // Guatemala City
+      "SAL": "america", // San Salvador
+      "TGU": "america", // Tegucigalpa
+      "MGA": "america", // Managua
+      "HAV": "america", // Havanna
+      "SXM": "america", // Sint Maarten
+      "CUR": "america", // Curaçao
+      "AUA": "america", // Aruba
+      "GRU": "america", "CGH": "america", // São Paulo
+      "GIG": "america", "SDU": "america", // Rio de Janeiro
+      "BSB": "america", // Brasília
+      "FOR": "america", // Fortaleza
+      "REC": "america", // Recife
+      "SSA": "america", // Salvador
+      "POA": "america", // Porto Alegre
+      "BEL": "america", // Belém
+      "MAO": "america", // Manaus
+      "EZE": "america", "AEP": "america", // Buenos Aires
+      "SCL": "america", // Santiago
+      "LIM": "america", // Lima
+      "BOG": "america", // Bogotá
+      "UIO": "america", // Quito
+      "CCS": "america", // Caracas
+      "PBM": "america", // Paramaribo
+      "GEO": "america", // Georgetown
+      "MVD": "america", // Montevideo
+      "ASU": "america", // Asunción
+
+      // AFRIKA
+      "CAI": "africa", // Kairo
+      "JNB": "africa", // Johannesburg
+      "CPT": "africa", // Kapstadt
+      "DUR": "africa", // Durban
+      "LOS": "africa", // Lagos
+      "ABV": "africa", // Abuja
+      "ACC": "africa", // Accra
+      "ABJ": "africa", // Abidjan
+      "DKR": "africa", // Dakar
+      "CAS": "africa", "RAK": "africa", // Casablanca, Marrakesch
+      "TUN": "africa", // Tunis
+      "ALG": "africa", // Algier
+      "ADD": "africa", // Addis Abeba
+      "NBO": "africa", // Nairobi
+      "DAR": "africa", // Dar es Salaam
+      "KGL": "africa", // Kigali
+      "EBB": "africa", // Entebbe
+      "LUN": "africa", // Lusaka
+      "HRE": "africa", // Harare
+      "WDH": "africa", // Windhoek
+      "GBE": "africa", // Gaborone
+      "MSU": "africa", // Maseru
+      "MPM": "africa", // Maputo
+      "TNR": "africa", // Antananarivo
+
+      // OZEANIEN
+      "SYD": "oceania", // Sydney
+      "MEL": "oceania", // Melbourne
+      "BNE": "oceania", // Brisbane
+      "PER": "oceania", // Perth
+      "ADL": "oceania", // Adelaide
+      "CBR": "oceania", // Canberra
+      "DRW": "oceania", // Darwin
+      "HBA": "oceania", // Hobart
+      "AKL": "oceania", // Auckland
+      "WLG": "oceania", // Wellington
+      "CHC": "oceania", // Christchurch
+      "NAN": "oceania", // Nadi, Fidschi
+      "PPT": "oceania", // Papeete, Tahiti
+      "NOU": "oceania", // Nouméa
+      "POM": "oceania", // Port Moresby
+      "HIR": "oceania", // Honiara
+      "VLI": "oceania", // Port Vila
+
+      // NAHER OSTEN
+      "DXB": "middle-east", "DWC": "middle-east", // Dubai
+      "AUH": "middle-east", // Abu Dhabi
+      "DOH": "middle-east", // Doha
+      "KWI": "middle-east", // Kuwait
+      "RUH": "middle-east", "JED": "middle-east", // Riad, Jeddah
+      "BAH": "middle-east", // Bahrain
+      "MCT": "middle-east", // Maskat
+      "TLV": "middle-east", // Tel Aviv
+      "AMM": "middle-east", // Amman
+      "BEY": "middle-east", // Beirut
+      "DAM": "middle-east", // Damaskus
+      "BGW": "middle-east", // Bagdad
+      "EBL": "middle-east", // Erbil
+      "IKA": "middle-east", // Tehran
+      "SHJ": "middle-east", // Sharjah
+      "RKT": "middle-east", // Ras al-Khaimah
     };
     
     return regionMap[destination] || "other";
@@ -161,6 +310,24 @@ export default function Community() {
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
+  };
+
+  // Calculate planned budget from budget items
+  const getPlannedBudget = (budgetItems: TripWithUpvotes['budgetItems']): number => {
+    console.log("🔍 getPlannedBudget called with:", budgetItems);
+    if (!budgetItems || budgetItems.length === 0) {
+      console.log("🔍 No budget items found");
+      return 0;
+    }
+    
+    const total = budgetItems.reduce((sum, item) => {
+      const amount = parseFloat(item.totalPrice || "0");
+      console.log(`🔍 Budget item: ${item.category} - ${item.subcategory}: €${amount}`);
+      return sum + amount;
+    }, 0);
+    
+    console.log("🔍 Total planned budget:", total);
+    return total;
   };
 
   // Filter and sort trips
@@ -290,9 +457,12 @@ export default function Community() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Alle Ziele</SelectItem>
-                    <SelectItem value="asia">Asien</SelectItem>
                     <SelectItem value="europe">Europa</SelectItem>
+                    <SelectItem value="asia">Asien</SelectItem>
                     <SelectItem value="america">Amerika</SelectItem>
+                    <SelectItem value="africa">Afrika</SelectItem>
+                    <SelectItem value="oceania">Ozeanien</SelectItem>
+                    <SelectItem value="middle-east">Naher Osten</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -411,11 +581,32 @@ export default function Community() {
                       </div>
                       
                       {trip.totalBudget && (
-                        <div className="flex items-center space-x-3">
-                          <div className="p-1.5 bg-emerald-100 rounded-lg">
-                            <span className="text-emerald-600 font-bold text-xs">€</span>
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-3">
+                            <div className="p-1.5 bg-emerald-100 rounded-lg">
+                              <span className="text-emerald-600 font-bold text-xs">€</span>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">
+                                Gesamtbudget: €{parseFloat(trip.totalBudget).toLocaleString()}
+                              </span>
+                              {(() => {
+                                console.log(`🔍 Rendering trip ${trip.name}: budgetItems exist?`, !!trip.budgetItems);
+                                console.log(`🔍 budgetItems length:`, trip.budgetItems?.length);
+                                const plannedBudget = getPlannedBudget(trip.budgetItems);
+                                console.log(`🔍 Calculated planned budget:`, plannedBudget);
+                                
+                                if (trip.budgetItems && trip.budgetItems.length > 0) {
+                                  return (
+                                    <span className="text-xs text-slate-500">
+                                      Verplant: €{plannedBudget.toLocaleString()}
+                                    </span>
+                                  );
+                                }
+                                return null;
+                              })()}
+                            </div>
                           </div>
-                          <span className="font-medium">€{parseFloat(trip.totalBudget).toLocaleString()}</span>
                         </div>
                       )}
                     </div>

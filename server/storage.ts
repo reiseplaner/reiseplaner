@@ -281,7 +281,20 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(trips.createdAt))
       .limit(limit);
 
-    return publicTrips;
+    // Add budget items for each trip
+    const tripsWithBudgetItems = await Promise.all(
+      publicTrips.map(async (trip) => {
+        const budgetItems = await this.getBudgetItemsByTripId(trip.id);
+        console.log(`🔍 Trip ${trip.name} (ID: ${trip.id}) has ${budgetItems.length} budget items`);
+        if (budgetItems.length > 0) {
+          console.log(`🔍 First budget item:`, budgetItems[0]);
+        }
+        return { ...trip, budgetItems };
+      })
+    );
+
+    console.log(`🔍 Returning ${tripsWithBudgetItems.length} trips with budget items`);
+    return tripsWithBudgetItems;
   }
 
   async getTripBySlug(slug: string): Promise<TripWithDetails | undefined> {

@@ -241,6 +241,7 @@ export type PublicTripWithDetails = TripWithDetails & {
 
 // Public trip with user info
 export type PublicTripWithUser = Trip & {
+  budgetItems: BudgetItem[];
   user: {
     id: string;
     username: string | null;
