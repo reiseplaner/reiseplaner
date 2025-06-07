@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -24,6 +25,12 @@ export default function Community() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Filter states
+  const [destinationFilter, setDestinationFilter] = useState("all");
+  const [durationFilter, setDurationFilter] = useState("all");
+  const [budgetFilter, setBudgetFilter] = useState("all");
+  const [sortFilter, setSortFilter] = useState("newest");
 
   const { data: publicTrips = [], isLoading } = useQuery({
     queryKey: ["/api/public/trips"],
@@ -63,6 +70,72 @@ export default function Community() {
     },
   });
 
+  // Destination region mapping
+  const getDestinationRegion = (destination: string): string => {
+    const regionMap: { [key: string]: string } = {
+      // Asien
+      "DPS": "asia", // Bali, Indonesien
+      "NRT": "asia", // Tokyo, Japan
+      "ICN": "asia", // Seoul, Südkorea
+      "PVG": "asia", // Shanghai, China
+      "HKG": "asia", // Hong Kong
+      "SIN": "asia", // Singapur
+      "BKK": "asia", // Bangkok, Thailand
+      "KUL": "asia", // Kuala Lumpur, Malaysia
+      "CGK": "asia", // Jakarta, Indonesien
+      "MNL": "asia", // Manila, Philippinen
+      "DEL": "asia", // Delhi, Indien
+      "BOM": "asia", // Mumbai, Indien
+      
+      // Europa
+      "ATH": "europe", // Athen, Griechenland
+      "CDG": "europe", // Paris, Frankreich
+      "LON": "europe", // London, UK
+      "LHR": "europe", // London Heathrow, UK
+      "ROM": "europe", // Rom, Italien
+      "FCO": "europe", // Rom Fiumicino, Italien
+      "BCN": "europe", // Barcelona, Spanien
+      "MAD": "europe", // Madrid, Spanien
+      "AMS": "europe", // Amsterdam, Niederlande
+      "FRA": "europe", // Frankfurt, Deutschland
+      "MUC": "europe", // München, Deutschland
+      "BER": "europe", // Berlin, Deutschland
+      "VIE": "europe", // Wien, Österreich
+      "ZUR": "europe", // Zürich, Schweiz
+      "KEF": "europe", // Reykjavik, Island
+      "CPH": "europe", // Kopenhagen, Dänemark
+      "STO": "europe", // Stockholm, Schweden
+      "OSL": "europe", // Oslo, Norwegen
+      "HEL": "europe", // Helsinki, Finnland
+      "WAW": "europe", // Warschau, Polen
+      "PRG": "europe", // Prag, Tschechien
+      "BUD": "europe", // Budapest, Ungarn
+      
+      // Amerika
+      "NYC": "america", // New York, USA
+      "JFK": "america", // New York JFK, USA
+      "LGA": "america", // New York LaGuardia, USA
+      "LAX": "america", // Los Angeles, USA
+      "SFO": "america", // San Francisco, USA
+      "CHI": "america", // Chicago, USA
+      "MIA": "america", // Miami, USA
+      "LAS": "america", // Las Vegas, USA
+      "DEN": "america", // Denver, USA
+      "SEA": "america", // Seattle, USA
+      "YVR": "america", // Vancouver, Kanada
+      "YYZ": "america", // Toronto, Kanada
+      "MEX": "america", // Mexiko Stadt, Mexiko
+      "GRU": "america", // São Paulo, Brasilien
+      "GIG": "america", // Rio de Janeiro, Brasilien
+      "EZE": "america", // Buenos Aires, Argentinien
+      "SCL": "america", // Santiago, Chile
+      "LIM": "america", // Lima, Peru
+      "BOG": "america", // Bogotá, Kolumbien
+    };
+    
+    return regionMap[destination] || "other";
+  };
+
   const getDestinationInfo = (destination: string) => {
     const destinationMap: { [key: string]: { icon: any } } = {
       "DPS": { icon: Mountain }, // Bali
@@ -80,6 +153,89 @@ export default function Community() {
     const defaultDestination = { icon: Plane };
     return destinationMap[destination || ""] || defaultDestination;
   };
+
+  // Calculate trip duration in days
+  const getTripDuration = (startDate: string, endDate: string): number => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // Filter and sort trips
+  const filteredAndSortedTrips = useMemo(() => {
+    let filtered = publicTrips.filter(trip => {
+      // Destination filter
+      if (destinationFilter !== "all") {
+        const region = getDestinationRegion(trip.destination || "");
+        if (destinationFilter !== region) return false;
+      }
+
+      // Duration filter
+      if (durationFilter !== "all" && trip.startDate && trip.endDate) {
+        const duration = getTripDuration(trip.startDate, trip.endDate);
+        switch (durationFilter) {
+          case "very-short":
+            if (duration < 1 || duration > 3) return false;
+            break;
+          case "short":
+            if (duration < 1 || duration > 7) return false;
+            break;
+          case "medium":
+            if (duration < 7 || duration > 14) return false;
+            break;
+          case "long":
+            if (duration <= 14) return false;
+            break;
+        }
+      }
+
+      // Budget filter
+      if (budgetFilter !== "all" && trip.totalBudget) {
+        const budget = parseFloat(trip.totalBudget);
+        switch (budgetFilter) {
+          case "low":
+            if (budget >= 1000) return false;
+            break;
+          case "medium":
+            if (budget < 1000 || budget > 3000) return false;
+            break;
+          case "medium-high":
+            if (budget < 3000 || budget > 5000) return false;
+            break;
+          case "high":
+            if (budget <= 5000) return false;
+            break;
+        }
+      }
+
+      return true;
+    });
+
+    // Sort trips
+    switch (sortFilter) {
+      case "popular":
+        filtered.sort((a, b) => (b.upvoteCount || 0) - (a.upvoteCount || 0));
+        break;
+      case "most-comments":
+        // Note: This would need comment count from the backend
+        // For now, using upvote count as proxy
+        filtered.sort((a, b) => (b.upvoteCount || 0) - (a.upvoteCount || 0));
+        break;
+      case "rating":
+        // Note: This would need rating data from the backend
+        // For now, using upvote count as proxy
+        filtered.sort((a, b) => (b.upvoteCount || 0) - (a.upvoteCount || 0));
+        break;
+      case "newest":
+      default:
+        filtered.sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime());
+        break;
+    }
+
+    return filtered;
+  }, [publicTrips, destinationFilter, durationFilter, budgetFilter, sortFilter]);
 
   const handleTripClick = (trip: TripWithUpvotes) => {
     if (trip.publicSlug) {
@@ -128,7 +284,7 @@ export default function Community() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Zielort</label>
-                <Select>
+                <Select value={destinationFilter} onValueChange={setDestinationFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Alle Ziele" />
                   </SelectTrigger>
@@ -142,12 +298,13 @@ export default function Community() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Dauer</label>
-                <Select>
+                <Select value={durationFilter} onValueChange={setDurationFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Alle Dauern" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Alle Dauern</SelectItem>
+                    <SelectItem value="very-short">1-3 Tage</SelectItem>
                     <SelectItem value="short">1-7 Tage</SelectItem>
                     <SelectItem value="medium">1-2 Wochen</SelectItem>
                     <SelectItem value="long">2+ Wochen</SelectItem>
@@ -156,7 +313,7 @@ export default function Community() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Budget</label>
-                <Select>
+                <Select value={budgetFilter} onValueChange={setBudgetFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Alle Budgets" />
                   </SelectTrigger>
@@ -164,19 +321,21 @@ export default function Community() {
                     <SelectItem value="all">Alle Budgets</SelectItem>
                     <SelectItem value="low">{'<'} €1.000</SelectItem>
                     <SelectItem value="medium">€1.000 - €3.000</SelectItem>
-                    <SelectItem value="high">{'>'} €3.000</SelectItem>
+                    <SelectItem value="medium-high">€3.000 - €5.000</SelectItem>
+                    <SelectItem value="high">{'>'} €5.000</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">Sortierung</label>
-                <Select>
+                <Select value={sortFilter} onValueChange={setSortFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Neueste" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="newest">Neueste</SelectItem>
                     <SelectItem value="popular">Beliebteste</SelectItem>
+                    <SelectItem value="most-comments">Meist kommentierte</SelectItem>
                     <SelectItem value="rating">Bewertung</SelectItem>
                   </SelectContent>
                 </Select>
@@ -186,7 +345,7 @@ export default function Community() {
         </Card>
 
         {/* Community Trip Cards */}
-        {publicTrips.length === 0 ? (
+        {filteredAndSortedTrips.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <div className="text-slate-400 mb-4">
@@ -202,7 +361,7 @@ export default function Community() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {publicTrips.map((trip) => {
+            {filteredAndSortedTrips.map((trip) => {
               const destinationInfo = getDestinationInfo(trip.destination || "");
               const IconComponent = destinationInfo.icon;
               
