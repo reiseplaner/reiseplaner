@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+// @ts-ignore - react-big-calendar types issue
 import { Calendar, dateFnsLocalizer, Views, View } from "react-big-calendar";
 import { format, parse, startOfWeek, getDay } from "date-fns";
 import { de } from "date-fns/locale";
@@ -465,7 +466,102 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     monthHeaderFormat: (date: Date) => format(date, 'MMMM yyyy', { locale: de }),
   };
 
-  return (
+
+
+  // Effect to manually highlight trip dates after calendar renders
+  useEffect(() => {
+    if (!trip.startDate || !trip.endDate) return;
+
+    const highlightTripDates = () => {
+      // Normalize dates to midnight to avoid time comparison issues
+      const startDate = new Date(trip.startDate!);
+      startDate.setHours(0, 0, 0, 0);
+      
+      const endDate = new Date(trip.endDate!);
+      endDate.setHours(23, 59, 59, 999);
+      
+      console.log('🔍 Trip dates:', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
+      
+      // Much simpler approach: find all button links and try to match their dates
+      const buttonLinks = document.querySelectorAll('.react-big-calendar-custom .rbc-month-view .rbc-date-cell .rbc-button-link');
+      
+      console.log('🔍 Found', buttonLinks.length, 'button links');
+      
+      buttonLinks.forEach((button) => {
+        const buttonElement = button as HTMLElement;
+        const dateText = buttonElement.textContent?.trim();
+        
+        if (!dateText || isNaN(parseInt(dateText))) return;
+        
+        const dayNumber = parseInt(dateText);
+        
+        // Reset all styles first
+        buttonElement.style.backgroundColor = '';
+        buttonElement.style.color = '';
+        buttonElement.style.fontWeight = '';
+        buttonElement.style.borderRadius = '';
+        buttonElement.style.border = '';
+        buttonElement.style.boxShadow = '';
+        
+        // Check if this button is in current month by checking if it's grayed out
+        const parentCell = buttonElement.closest('.rbc-date-cell') as HTMLElement;
+        const isOffRange = parentCell?.classList.contains('rbc-off-range');
+        
+        let buttonDate: Date;
+        
+        if (!isOffRange) {
+          // This is definitely in the current displayed month
+          buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
+        } else {
+          // This might be from previous or next month, but we still want to check if it's in trip range
+          // Try current month first
+          buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
+          
+          // If that doesn't work, try previous month
+          if (dayNumber > 15) {
+            buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, dayNumber);
+          } else {
+            // Try next month
+            buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, dayNumber);
+          }
+        }
+        
+        const buttonDateStr = format(buttonDate, 'yyyy-MM-dd');
+        
+        console.log('🔍 Checking date:', buttonDateStr, 'day:', dayNumber, 'isOffRange:', isOffRange);
+        
+        // Check if this date is within trip range
+        const isInTripRange = buttonDate >= startDate && buttonDate <= endDate;
+        console.log('🔍 Date comparison for', buttonDateStr, ':', {
+          buttonDate: buttonDate.getTime(),
+          startDate: startDate.getTime(), 
+          endDate: endDate.getTime(),
+          isAfterStart: buttonDate >= startDate,
+          isBeforeEnd: buttonDate <= endDate,
+          isInRange: isInTripRange
+        });
+        
+        if (isInTripRange) {
+          console.log('🟢 Highlighting date:', buttonDateStr);
+          
+          // Apply styles ONLY to button
+          buttonElement.style.backgroundColor = '#10B981';
+          buttonElement.style.color = 'white';
+          buttonElement.style.fontWeight = '600';
+          buttonElement.style.borderRadius = '8px';
+          buttonElement.style.border = '2px solid white';
+          buttonElement.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+        }
+      });
+    };
+
+    // Run immediately and on calendar changes
+    const timeoutId = setTimeout(highlightTripDates, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, [trip.startDate, trip.endDate, currentDate, currentView]);
+
+      return (
     <div className="space-y-8">
       {/* Ultra-Modern Calendar Card */}
       <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-lg">

@@ -405,16 +405,25 @@
   font-weight: 600;
 }
 
-/* ===== TRIP DATE STYLING - SOLID COLORS ONLY ===== */
+/* ===== TRIP DATE STYLING - ENHANCED FOR MONTH VIEW ===== */
+/* Base trip date styling for Month View */
 .react-big-calendar-custom .rbc-date-cell.trip-date {
   background: var(--trip-green-light) !important;
-  border: 2px solid var(--trip-green-border);
+  border: 2px solid var(--trip-green-border) !important;
   position: relative;
 }
 
+/* For month view, we also need to target the row content */
+.react-big-calendar-custom .rbc-month-row .rbc-date-cell.trip-date {
+  background: var(--trip-green-light) !important;
+  border: 2px solid var(--trip-green-border) !important;
+  position: relative;
+}
+
+/* Trip date button styling */
 .react-big-calendar-custom .rbc-date-cell.trip-date .rbc-button-link {
   background: var(--trip-green) !important;
-  color: white;
+  color: white !important;
   font-weight: 600;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
   border: 2px solid white;
@@ -422,6 +431,20 @@
 
 .react-big-calendar-custom .rbc-date-cell.trip-date .rbc-button-link:hover {
   background: #059669 !important;
+  color: white !important;
+  transform: scale(1.1);
+}
+
+/* Additional specificity for month view */
+.react-big-calendar-custom .rbc-month-view .rbc-date-cell.trip-date .rbc-button-link {
+  background: var(--trip-green) !important;
+  color: white !important;
+  font-weight: 600;
+}
+
+.react-big-calendar-custom .rbc-month-view .rbc-date-cell.trip-date .rbc-button-link:hover {
+  background: #059669 !important;
+  color: white !important;
   transform: scale(1.1);
 }
 
@@ -430,24 +453,49 @@
   background: var(--trip-green-light) !important;
 }
 
+/* Week/Day view header cells for trip dates */
+.react-big-calendar-custom .rbc-header.trip-date {
+  background: var(--trip-green-light) !important;
+  border: 2px solid var(--trip-green-border) !important;
+  color: var(--trip-green) !important;
+  font-weight: 700;
+}
+
 /* Trip Start Date */
 .react-big-calendar-custom .rbc-date-cell.trip-start {
   border-top-left-radius: 12px;
   border-bottom-left-radius: 12px;
-  border-left: 3px solid var(--trip-green);
+  border-left: 3px solid var(--trip-green) !important;
+}
+
+.react-big-calendar-custom .rbc-month-row .rbc-date-cell.trip-start {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  border-left: 3px solid var(--trip-green) !important;
 }
 
 /* Trip End Date */
 .react-big-calendar-custom .rbc-date-cell.trip-end {
   border-top-right-radius: 12px;
   border-bottom-right-radius: 12px;
-  border-right: 3px solid var(--trip-green);
+  border-right: 3px solid var(--trip-green) !important;
+}
+
+.react-big-calendar-custom .rbc-month-row .rbc-date-cell.trip-end {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  border-right: 3px solid var(--trip-green) !important;
 }
 
 /* Single Trip Date */
 .react-big-calendar-custom .rbc-date-cell.trip-single {
   border-radius: 12px;
-  border: 3px solid var(--trip-green);
+  border: 3px solid var(--trip-green) !important;
+}
+
+.react-big-calendar-custom .rbc-month-row .rbc-date-cell.trip-single {
+  border-radius: 12px;
+  border: 3px solid var(--trip-green) !important;
 }
 
 /* ===== EVENTS - SOLID COLORS ONLY ===== */
