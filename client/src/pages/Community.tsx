@@ -9,6 +9,8 @@ import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/Navigation";
 import { Heart, MapPin, Calendar, Users, Plane, Mountain, Building } from "lucide-react";
 import type { Trip, PublicTripWithUser } from "@shared/schema";
+import CopyTripDialog, { type CopyOptions } from "@/components/CopyTripDialog";
+import UpgradePrompt from "@/components/UpgradePrompt";
 
 // Extended trip type with upvote count
 type TripWithUpvotes = PublicTripWithUser & { 
@@ -26,46 +28,180 @@ export default function Community() {
   const [budgetFilter, setBudgetFilter] = useState("all");
   const [sortFilter, setSortFilter] = useState("newest");
 
+  // Copy dialog state
+  const [copyDialogOpen, setCopyDialogOpen] = useState(false);
+  const [tripToCopy, setTripToCopy] = useState<TripWithUpvotes | null>(null);
+
+  // Upgrade prompt state
+  const [upgradePromptOpen, setUpgradePromptOpen] = useState(false);
+  const [limitInfo, setLimitInfo] = useState<{
+    currentPlan: 'free' | 'pro' | 'veteran';
+    tripsUsed: number;
+    tripsLimit: number;
+  } | null>(null);
+
   const { data: publicTrips = [], isLoading } = useQuery({
     queryKey: ["/api/public/trips"],
     queryFn: async () => {
       const response = await apiRequest("GET", "/api/public/trips");
       const data = await response.json() as TripWithUpvotes[];
-      console.log("🔍 Community: Loaded trips:", data.length);
-      data.forEach((trip, index) => {
-        console.log(`🔍 Trip ${index}:`, trip.name);
-        console.log(`🔍 - budgetItems:`, trip.budgetItems);
-        console.log(`🔍 - budgetItems length:`, trip.budgetItems?.length);
-        if (trip.budgetItems && trip.budgetItems.length > 0) {
-          console.log(`🔍 - first budget item:`, trip.budgetItems[0]);
-        }
-      });
       return data;
     },
   });
 
   const copyTripMutation = useMutation({
-    mutationFn: async (publicTrip: TripWithUpvotes) => {
+    mutationFn: async ({ trip, options }: { trip: TripWithUpvotes; options: CopyOptions }) => {
+      console.log("🔍 Copying trip:", trip, "with options:", options);
+      
+      // Create the new trip
       const response = await apiRequest("POST", "/api/trips", {
-        name: `${publicTrip.name} (Kopie)`,
-        departure: publicTrip.departure,
-        destination: publicTrip.destination,
-        startDate: publicTrip.startDate,
-        endDate: publicTrip.endDate,
-        travelers: publicTrip.travelers,
-        description: publicTrip.description,
+        name: `${trip.name} (Kopie)`,
+        departure: trip.departure,
+        destination: trip.destination,
+        startDate: trip.startDate,
+        endDate: trip.endDate,
+        travelers: trip.travelers,
+        totalBudget: trip.totalBudget,
+        description: trip.description,
       });
-      return response.json();
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const newTrip = await response.json();
+      console.log("🔍 Created new trip:", newTrip);
+      
+      // Copy selected components
+      const copyPromises = [];
+      
+      // Copy budget items if selected
+      if (options.copyBudgetItems && trip.budgetItems && trip.budgetItems.length > 0) {
+        console.log("🔍 Copying budget items:", trip.budgetItems.length);
+        
+        const budgetPromises = trip.budgetItems.map(async (budgetItem) => {
+          const budgetResponse = await apiRequest("POST", `/api/trips/${newTrip.id}/budget-items`, {
+            category: budgetItem.category,
+            subcategory: budgetItem.subcategory,
+            quantity: budgetItem.quantity || 1,
+            unitPrice: budgetItem.unitPrice,
+            totalPrice: budgetItem.totalPrice,
+            comment: budgetItem.comment,
+            affiliateLink: budgetItem.affiliateLink,
+          });
+          
+          if (!budgetResponse.ok) {
+            console.error("🔴 Failed to copy budget item:", budgetItem);
+          }
+        });
+        
+        copyPromises.push(...budgetPromises);
+      }
+      
+      // Copy activities if selected
+      if (options.copyActivities && trip.activities && trip.activities.length > 0) {
+        console.log("🔍 Copying activities:", trip.activities.length);
+        
+        const activityPromises = trip.activities.map(async (activity) => {
+          const activityResponse = await apiRequest("POST", `/api/trips/${newTrip.id}/activities`, {
+            title: activity.title,
+            category: activity.category,
+            location: activity.location,
+            date: activity.date,
+            timeFrom: activity.timeFrom,
+            timeTo: activity.timeTo,
+            price: activity.price,
+            comment: activity.comment,
+            bookingLink: activity.bookingLink,
+            status: activity.status,
+          });
+          
+          if (!activityResponse.ok) {
+            console.error("🔴 Failed to copy activity:", activity);
+          }
+        });
+        
+        copyPromises.push(...activityPromises);
+      }
+      
+      // Copy restaurants if selected
+      if (options.copyRestaurants && trip.restaurants && trip.restaurants.length > 0) {
+        console.log("🔍 Copying restaurants:", trip.restaurants.length);
+        
+        const restaurantPromises = trip.restaurants.map(async (restaurant) => {
+          const restaurantResponse = await apiRequest("POST", `/api/trips/${newTrip.id}/restaurants`, {
+            name: restaurant.name,
+            address: restaurant.address,
+            date: restaurant.date,
+            timeFrom: restaurant.timeFrom,
+            timeTo: restaurant.timeTo,
+            cuisine: restaurant.cuisine,
+            priceRange: restaurant.priceRange,
+            reservationLink: restaurant.reservationLink,
+            status: restaurant.status,
+            comment: restaurant.comment,
+          });
+          
+          if (!restaurantResponse.ok) {
+            console.error("🔴 Failed to copy restaurant:", restaurant);
+          }
+        });
+        
+        copyPromises.push(...restaurantPromises);
+      }
+      
+      // Wait for all copy operations to complete
+      await Promise.all(copyPromises);
+      
+      console.log("🟢 All selected items copied successfully");
+      return newTrip;
     },
     onSuccess: (newTrip) => {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+      setCopyDialogOpen(false);
+      setTripToCopy(null);
       setLocation(`/trip-planning/${newTrip.id}`);
       toast({
         title: "Reise kopiert",
         description: "Die Reise wurde erfolgreich zu deinem Account hinzugefügt.",
       });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("🔴 Copy trip error:", error);
+      
+      // Check if it's a plan limit error
+      if (error.message && error.message.includes('403:')) {
+        try {
+          const errorData = JSON.parse(error.message.split('403: ')[1]);
+          if (errorData.limitReached && errorData.upgradeRequired) {
+            // Show upgrade prompt instead of generic error
+            setLimitInfo({
+              currentPlan: errorData.currentPlan || 'free',
+              tripsUsed: 2, // Default values based on error message
+              tripsLimit: 2
+            });
+            setUpgradePromptOpen(true);
+            setCopyDialogOpen(false);
+            return;
+          }
+        } catch (parseError) {
+          console.error("🔴 Failed to parse error data:", parseError);
+        }
+      }
+      
+      // Also check for the specific German error message
+      if (error.message && error.message.includes('Sie haben das Limit von 2 Reisen für den FREE Plan erreicht')) {
+        setLimitInfo({
+          currentPlan: 'free',
+          tripsUsed: 2,
+          tripsLimit: 2
+        });
+        setUpgradePromptOpen(true);
+        setCopyDialogOpen(false);
+        return;
+      }
+      
+      // Generic error handling
       toast({
         title: "Fehler",
         description: "Die Reise konnte nicht kopiert werden.",
@@ -73,6 +209,17 @@ export default function Community() {
       });
     },
   });
+
+  const handleCopyClick = (trip: TripWithUpvotes) => {
+    setTripToCopy(trip);
+    setCopyDialogOpen(true);
+  };
+
+  const handleCopyConfirm = (options: CopyOptions) => {
+    if (tripToCopy) {
+      copyTripMutation.mutate({ trip: tripToCopy, options });
+    }
+  };
 
   // Destination region mapping
   const getDestinationRegion = (destination: string): string => {
@@ -314,20 +461,14 @@ export default function Community() {
 
   // Calculate planned budget from budget items
   const getPlannedBudget = (budgetItems: TripWithUpvotes['budgetItems']): number => {
-    console.log("🔍 getPlannedBudget called with:", budgetItems);
     if (!budgetItems || budgetItems.length === 0) {
-      console.log("🔍 No budget items found");
       return 0;
     }
     
-    const total = budgetItems.reduce((sum, item) => {
+    return budgetItems.reduce((sum, item) => {
       const amount = parseFloat(item.totalPrice || "0");
-      console.log(`🔍 Budget item: ${item.category} - ${item.subcategory}: €${amount}`);
       return sum + amount;
     }, 0);
-    
-    console.log("🔍 Total planned budget:", total);
-    return total;
   };
 
   // Filter and sort trips
@@ -590,21 +731,11 @@ export default function Community() {
                               <span className="font-medium text-sm">
                                 Gesamtbudget: €{parseFloat(trip.totalBudget).toLocaleString()}
                               </span>
-                              {(() => {
-                                console.log(`🔍 Rendering trip ${trip.name}: budgetItems exist?`, !!trip.budgetItems);
-                                console.log(`🔍 budgetItems length:`, trip.budgetItems?.length);
-                                const plannedBudget = getPlannedBudget(trip.budgetItems);
-                                console.log(`🔍 Calculated planned budget:`, plannedBudget);
-                                
-                                if (trip.budgetItems && trip.budgetItems.length > 0) {
-                                  return (
-                                    <span className="text-xs text-slate-500">
-                                      Verplant: €{plannedBudget.toLocaleString()}
-                                    </span>
-                                  );
-                                }
-                                return null;
-                              })()}
+                              {trip.budgetItems && trip.budgetItems.length > 0 && (
+                                <span className="text-xs text-slate-500">
+                                  Verplant: €{getPlannedBudget(trip.budgetItems).toLocaleString()}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -630,7 +761,7 @@ export default function Community() {
                         size="sm"
                         onClick={(e) => {
                           e.stopPropagation();
-                          copyTripMutation.mutate(trip);
+                          handleCopyClick(trip);
                         }}
                         disabled={copyTripMutation.isPending}
                         className="bg-primary text-white hover:bg-primary/90"
@@ -645,6 +776,34 @@ export default function Community() {
           </div>
         )}
       </div>
+
+      {/* Copy Trip Dialog */}
+      {tripToCopy && (
+        <CopyTripDialog
+          isOpen={copyDialogOpen}
+          onClose={() => {
+            setCopyDialogOpen(false);
+            setTripToCopy(null);
+          }}
+          onConfirm={handleCopyConfirm}
+          trip={tripToCopy}
+          isLoading={copyTripMutation.isPending}
+        />
+      )}
+
+      {/* Upgrade Prompt */}
+      {limitInfo && (
+        <UpgradePrompt
+          isOpen={upgradePromptOpen}
+          onClose={() => {
+            setUpgradePromptOpen(false);
+            setLimitInfo(null);
+          }}
+          currentPlan={limitInfo.currentPlan}
+          tripsUsed={limitInfo.tripsUsed}
+          tripsLimit={limitInfo.tripsLimit}
+        />
+      )}
     </div>
   );
 }

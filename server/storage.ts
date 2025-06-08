@@ -281,20 +281,31 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(trips.createdAt))
       .limit(limit);
 
-    // Add budget items for each trip
-    const tripsWithBudgetItems = await Promise.all(
+    // Add budget items, activities, and restaurants for each trip
+    const tripsWithDetails = await Promise.all(
       publicTrips.map(async (trip) => {
-        const budgetItems = await this.getBudgetItemsByTripId(trip.id);
-        console.log(`🔍 Trip ${trip.name} (ID: ${trip.id}) has ${budgetItems.length} budget items`);
-        if (budgetItems.length > 0) {
-          console.log(`🔍 First budget item:`, budgetItems[0]);
-        }
-        return { ...trip, budgetItems };
+        const [budgetItems, activities, restaurants] = await Promise.all([
+          this.getBudgetItemsByTripId(trip.id),
+          this.getActivitiesByTripId(trip.id),
+          this.getRestaurantsByTripId(trip.id),
+        ]);
+        
+        console.log(`🔍 Trip ${trip.name} (ID: ${trip.id}) has:`);
+        console.log(`🔍 - ${budgetItems.length} budget items`);
+        console.log(`🔍 - ${activities.length} activities`);
+        console.log(`🔍 - ${restaurants.length} restaurants`);
+        
+        return { 
+          ...trip, 
+          budgetItems,
+          activities,
+          restaurants
+        };
       })
     );
 
-    console.log(`🔍 Returning ${tripsWithBudgetItems.length} trips with budget items`);
-    return tripsWithBudgetItems;
+    console.log(`🔍 Returning ${tripsWithDetails.length} trips with full details`);
+    return tripsWithDetails;
   }
 
   async getTripBySlug(slug: string): Promise<TripWithDetails | undefined> {
