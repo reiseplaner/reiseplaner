@@ -4,12 +4,14 @@ import { supabase } from '@/lib/supabase';
 import { useQuery } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
 import type { User as DbUser } from '@shared/schema';
+import { useLocation } from 'wouter';
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [usernameSetupSkipped, setUsernameSetupSkipped] = useState(false);
   const [dbUserLoadingTimeout, setDbUserLoadingTimeout] = useState(false);
+  const [, setLocation] = useLocation();
 
   // Check if username setup was skipped
   useEffect(() => {
@@ -123,6 +125,9 @@ export function useAuth() {
     // Clear the skipped flag on logout
     localStorage.removeItem('username-setup-skipped');
     setUsernameSetupSkipped(false);
+    
+    // Navigate to landing page after logout
+    setLocation('/');
   };
 
   const forceSignOut = async () => {

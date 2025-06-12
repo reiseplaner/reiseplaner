@@ -26,6 +26,13 @@ const budgetItemFormSchema = insertBudgetItemSchema.extend({
   totalPrice: z.string().optional(),
 });
 
+// Helper function to safely parse float values
+const safeParseFloat = (value: string | undefined | null): number => {
+  if (!value || value.trim() === '') return 0;
+  const parsed = parseFloat(value);
+  return isNaN(parsed) ? 0 : parsed;
+};
+
 // Subcategory options for each main category
 const subcategoryOptions = {
   "Transport": [
@@ -131,19 +138,19 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
         throw new Error("Sie sind nicht angemeldet. Bitte laden Sie die Seite neu und melden Sie sich erneut an.");
       }
       
-      const unitPrice = parseFloat(data.unitPrice);
+      const unitPrice = safeParseFloat(data.unitPrice);
       const totalPrice = unitPrice * (data.quantity || 1);
       
       // Clean up the data before sending
       const cleanData = {
         tripId: tripId,
-        category: data.category,
-        subcategory: data.subcategory || null,
+        category: data.category?.trim(),
+        subcategory: data.subcategory?.trim() || null,
         quantity: data.quantity || 1,
         unitPrice: unitPrice.toString(),
         totalPrice: totalPrice.toString(),
-        comment: data.comment || null,
-        affiliateLink: data.affiliateLink || null,
+        comment: data.comment?.trim() || null,
+        affiliateLink: data.affiliateLink?.trim() || null,
       };
       
       console.log("🔵 Daten, die gespeichert werden:", cleanData);
@@ -231,18 +238,18 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     mutationFn: async ({ id, data }: { id: number; data: z.infer<typeof budgetItemFormSchema> }) => {
       console.log("🔵 Update Budget Item Mutation gestartet mit:", { id, data });
       
-      const unitPrice = parseFloat(data.unitPrice);
+      const unitPrice = safeParseFloat(data.unitPrice);
       const totalPrice = unitPrice * (data.quantity || 1);
       
       // Clean up the data before sending
       const cleanData = {
-        category: data.category,
-        subcategory: data.subcategory || null,
+        category: data.category?.trim(),
+        subcategory: data.subcategory?.trim() || null,
         quantity: data.quantity || 1,
         unitPrice: unitPrice.toString(),
         totalPrice: totalPrice.toString(),
-        comment: data.comment || null,
-        affiliateLink: data.affiliateLink || null,
+        comment: data.comment?.trim() || null,
+        affiliateLink: data.affiliateLink?.trim() || null,
       };
       
       console.log("🔵 Update-Daten, die gespeichert werden:", cleanData);
@@ -402,9 +409,9 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   };
 
   const calculateBudgetSummary = () => {
-    const totalBudget = parseFloat(trip.totalBudget || "0");
+    const totalBudget = safeParseFloat(trip.totalBudget);
     const plannedBudget = (trip.budgetItems || []).reduce((sum, item) => {
-      return sum + parseFloat(item.totalPrice || "0");
+      return sum + safeParseFloat(item.totalPrice);
     }, 0);
     const remaining = totalBudget - plannedBudget;
     const percentage = totalBudget > 0 ? Math.round((plannedBudget / totalBudget) * 100) : 0;
@@ -467,7 +474,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
 
   // Calculate category totals
   const getCategoryTotal = (categoryItems: BudgetItem[]) => {
-    return categoryItems.reduce((sum, item) => sum + parseFloat(item.totalPrice || "0"), 0);
+    return categoryItems.reduce((sum, item) => sum + safeParseFloat(item.totalPrice), 0);
   };
 
   // Flight search mutation
@@ -676,7 +683,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                                 />
                               </td>
                               <td className="py-3 px-3 text-sm font-semibold text-slate-900">
-                                €{((parseFloat(form.watch("unitPrice") || "0")) * (form.watch("quantity") || 1)).toLocaleString()}
+                                €{(safeParseFloat(form.watch("unitPrice")) * (form.watch("quantity") || 1)).toLocaleString()}
                               </td>
                               <td className="py-3 px-3">
                                 <Input
@@ -722,16 +729,16 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                             // Normal display mode
                             <>
                               <td className="py-3 px-3 text-sm text-slate-900 font-medium">
-                                {item.subcategory || "-"}
+                                {item.subcategory?.trim() || "-"}
                               </td>
                               <td className="py-3 px-3 text-sm text-slate-600">
-                                €{parseFloat(item.unitPrice || "0").toLocaleString()}
+                                €{safeParseFloat(item.unitPrice).toLocaleString()}
                               </td>
                               <td className="py-3 px-3 text-sm text-slate-600">
                                 {item.quantity}x
                               </td>
                               <td className="py-3 px-3 text-sm font-semibold text-slate-900">
-                                €{parseFloat(item.totalPrice || "0").toLocaleString()}
+                                €{safeParseFloat(item.totalPrice).toLocaleString()}
                               </td>
                               <td className="py-3 px-3 text-sm text-slate-600 max-w-xs truncate">
                                 {item.comment || "-"}
@@ -830,7 +837,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                             />
                           </td>
                           <td className="py-3 px-3 text-sm font-semibold text-slate-900">
-                            €{((parseFloat(form.watch("unitPrice") || "0")) * (form.watch("quantity") || 1)).toLocaleString()}
+                            €{(safeParseFloat(form.watch("unitPrice")) * (form.watch("quantity") || 1)).toLocaleString()}
                           </td>
                           <td className="py-3 px-3">
                             <Input

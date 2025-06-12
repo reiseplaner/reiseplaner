@@ -181,172 +181,229 @@
   flex-direction: column;
 }
 
-/* Week/Day Header - Improved alignment */
+/* ===== ULTRA-MODERN WEEK/DAY VIEW HEADER ===== */
 .react-big-calendar-custom .rbc-time-header {
-  border-bottom: 1px solid var(--gray-200);
+  border: none;
   background: white;
   display: flex;
   flex-shrink: 0;
-  height: auto;
-  min-height: 60px;
+  height: 100px;
   position: relative;
   z-index: 2;
+  padding: 20px 0;
 }
 
 .react-big-calendar-custom .rbc-time-header-gutter {
   background: white;
-  border-right: 1px solid var(--gray-200);
+  border: none;
   flex-shrink: 0;
   width: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .react-big-calendar-custom .rbc-time-header-content {
   flex: 1;
   display: flex;
-  background: white;
+  background: transparent;
   flex-direction: column;
   position: relative;
   overflow: visible;
+  gap: 16px;
+  padding: 0 16px;
 }
 
-/* Week view header row - Force horizontal layout */
+/* Week view header row - Minimal flex layout */
 .react-big-calendar-custom .rbc-time-header-content .rbc-row {
-  display: grid !important;
-  grid-template-columns: repeat(7, 1fr) !important;
+  display: flex !important;
   width: 100% !important;
-  height: 60px;
+  height: auto;
   position: relative;
+  gap: 12px;
 }
 
-/* Week view individual headers - Red styling */
+/* Week view individual headers - Ultra-modern card design */
 .react-big-calendar-custom .rbc-time-header-content .rbc-row .rbc-header {
-  border-right: 1px solid var(--gray-100);
-  border-bottom: none;
+  flex: 1;
+  border: none;
+  border-radius: 16px;
   padding: 16px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #DC2626 !important;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
   text-align: center;
-  text-transform: none !important;
-  background: white;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  background: #F8FAFC;
+  letter-spacing: 0;
   display: flex !important;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 60px;
   box-sizing: border-box;
   position: relative;
-  height: 100%;
+  height: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.react-big-calendar-custom .rbc-time-header-content .rbc-row .rbc-header:hover {
+  background: #F1F5F9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Alternative approach for different DOM structures */
 .react-big-calendar-custom .rbc-time-header-content .rbc-header {
-  width: calc(100% / 7) !important;
-  float: left !important;
-  border-right: 1px solid var(--gray-100);
-  border-bottom: none;
+  flex: 1;
+  border: none;
+  border-radius: 16px;
   padding: 16px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #DC2626 !important;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
   text-align: center;
-  text-transform: none !important;
-  background: white;
-  letter-spacing: 0.5px;
+  text-transform: none;
+  background: #F8FAFC;
+  letter-spacing: 0;
   display: flex !important;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 60px;
   box-sizing: border-box;
-  height: 100%;
+  height: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-right: 12px;
+}
+
+.react-big-calendar-custom .rbc-time-header-content .rbc-header:hover {
+  background: #F1F5F9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .react-big-calendar-custom .rbc-time-header-content .rbc-row .rbc-header:last-child,
 .react-big-calendar-custom .rbc-time-header-content .rbc-header:last-child {
-  border-right: none;
+  margin-right: 0;
 }
 
-/* Clear floats for header row */
-.react-big-calendar-custom .rbc-time-header-content .rbc-row::after {
-  content: "";
-  display: table;
-  clear: both;
-}
-
-/* Restore time header content to column layout */
-.react-big-calendar-custom .rbc-time-header-content {
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-/* Week view direct headers - Red styling */
+/* Week view direct headers - Consistent modern styling */
 .react-big-calendar-custom .rbc-time-header > .rbc-header {
   flex: 1;
-  border-right: 1px solid var(--gray-100);
-  border-bottom: none;
+  border: none;
+  border-radius: 16px;
   padding: 16px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #DC2626;
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748B;
   text-align: center;
   text-transform: none;
-  background: white;
-  letter-spacing: 0.5px;
+  background: #F8FAFC;
+  letter-spacing: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 60px;
   box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-right: 12px;
+}
+
+.react-big-calendar-custom .rbc-time-header > .rbc-header:hover {
+  background: #F1F5F9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .react-big-calendar-custom .rbc-time-header > .rbc-header:last-child {
-  border-right: none;
+  margin-right: 0;
 }
 
-/* Time Content */
+/* Modern trip date headers - Elegant emerald design */
+.react-big-calendar-custom .rbc-time-header .rbc-header.trip-date {
+  background: linear-gradient(135deg, #10B981, #059669) !important;
+  color: white !important;
+  font-weight: 600 !important;
+  border: none !important;
+  margin: 0 !important;
+  margin-right: 12px !important;
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3) !important;
+  transform: translateY(-4px) !important;
+}
+
+.react-big-calendar-custom .rbc-time-header .rbc-header.trip-date:last-child {
+  margin-right: 0 !important;
+}
+
+.react-big-calendar-custom .rbc-time-header .rbc-header.trip-date:hover {
+  background: linear-gradient(135deg, #059669, #047857) !important;
+  transform: translateY(-6px) !important;
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.4) !important;
+}
+
+/* Ultra-Modern Time Content */
 .react-big-calendar-custom .rbc-time-content {
   display: flex;
   border-top: none;
   flex: 1;
   overflow-y: auto;
+  background: white;
+  margin: 0 16px 16px 16px;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .react-big-calendar-custom .rbc-time-gutter {
-  background: var(--gray-50);
-  border-right: 1px solid var(--gray-200);
+  background: #FAFAFA;
+  border-right: 1px solid #F1F5F9;
   flex-shrink: 0;
   width: 80px;
+  border-radius: 16px 0 0 16px;
 }
 
 .react-big-calendar-custom .rbc-time-column {
   flex: 1;
   display: flex;
   min-width: 0;
+  background: white;
 }
 
 .react-big-calendar-custom .rbc-day-slot {
   flex: 1;
-  border-right: 1px solid var(--gray-100);
+  border-right: 1px solid #F8FAFC;
   position: relative;
   min-width: 0;
+  transition: all 0.2s ease;
 }
 
 .react-big-calendar-custom .rbc-day-slot:last-child {
   border-right: none;
+  border-radius: 0 16px 16px 0;
+}
+
+.react-big-calendar-custom .rbc-day-slot:hover {
+  background: #FAFAFA;
 }
 
 .react-big-calendar-custom .rbc-timeslot-group {
-  border-bottom: 1px solid var(--gray-100);
+  border-bottom: 1px solid #F8FAFC;
   min-height: 48px;
   display: flex;
   flex-direction: column;
 }
 
 .react-big-calendar-custom .rbc-time-slot {
-  border-top: 1px solid var(--gray-100);
+  border-top: 1px solid #F8FAFC;
   min-height: 24px;
   flex: 1;
 }
@@ -355,14 +412,15 @@
   border-top: none;
 }
 
-/* Time labels - left aligned */
+/* Modern time labels */
 .react-big-calendar-custom .rbc-label {
-  color: var(--gray-500);
-  font-size: 12px;
+  color: #64748B;
+  font-size: 11px;
   font-weight: 500;
-  padding-left: 8px;
+  padding-left: 12px;
   text-align: left;
   line-height: 24px;
+  letter-spacing: 0.5px;
 }
 
 /* ===== DATE BUTTONS ===== */
@@ -448,17 +506,46 @@
   transform: scale(1.1);
 }
 
-/* Trip dates in Week/Day View - SOLID COLOR */
+/* ===== ULTRA-MODERN WEEK/DAY VIEW TRIP DATE STYLING ===== */
+/* Trip dates in Week/Day View - Elegant emerald columns */
 .react-big-calendar-custom .rbc-day-slot.trip-date {
-  background: var(--trip-green-light) !important;
+  background: rgba(16, 185, 129, 0.03) !important;
+  position: relative;
 }
 
-/* Week/Day view header cells for trip dates */
-.react-big-calendar-custom .rbc-header.trip-date {
-  background: var(--trip-green-light) !important;
-  border: 2px solid var(--trip-green-border) !important;
-  color: var(--trip-green) !important;
-  font-weight: 700;
+.react-big-calendar-custom .rbc-day-slot.trip-date::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  bottom: 0;
+  background: linear-gradient(to bottom, #10B981, #059669);
+  border-radius: 0 2px 2px 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.react-big-calendar-custom .rbc-day-slot.trip-date:hover {
+  background: rgba(16, 185, 129, 0.06) !important;
+}
+
+/* Week/Day view - Enhanced trip date styling */
+.react-big-calendar-custom .rbc-time-view .rbc-day-slot.trip-date {
+  background: rgba(16, 185, 129, 0.03) !important;
+  border-right: 2px solid rgba(16, 185, 129, 0.2) !important;
+  position: relative;
+}
+
+/* Today marker in week view for trip dates */
+.react-big-calendar-custom .rbc-time-view .rbc-day-slot.trip-date.today {
+  background: rgba(16, 185, 129, 0.08) !important;
+  border-right: 3px solid rgba(16, 185, 129, 0.4) !important;
+}
+
+.react-big-calendar-custom .rbc-time-view .rbc-day-slot.trip-date.today::before {
+  width: 6px;
+  background: linear-gradient(to bottom, #059669, #047857);
 }
 
 /* Trip Start Date */
@@ -599,14 +686,14 @@
   outline-offset: 2px;
 }
 
-/* Scrollbar */
+/* Ultra-Modern Scrollbar */
 .react-big-calendar-custom .rbc-time-content {
   scrollbar-width: thin;
-  scrollbar-color: var(--gray-300) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 
 .react-big-calendar-custom .rbc-time-content::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 .react-big-calendar-custom .rbc-time-content::-webkit-scrollbar-track {
@@ -614,12 +701,13 @@
 }
 
 .react-big-calendar-custom .rbc-time-content::-webkit-scrollbar-thumb {
-  background: var(--gray-300);
-  border-radius: 3px;
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
 .react-big-calendar-custom .rbc-time-content::-webkit-scrollbar-thumb:hover {
-  background: var(--gray-400);
+  background: rgba(100, 116, 139, 0.5);
 }
 
 /* Mobile Responsive */

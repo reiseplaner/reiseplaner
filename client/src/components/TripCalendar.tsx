@@ -45,6 +45,14 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     return new Date();
   });
 
+  // Debug: Log when component renders
+  console.log('🔍 TripCalendar render:', {
+    currentView,
+    currentDate: format(currentDate, 'yyyy-MM-dd'),
+    tripActivities: trip.activities?.length || 0,
+    tripRestaurants: trip.restaurants?.length || 0
+  });
+
   const events = useMemo(() => {
     const calendarEvents: CalendarEvent[] = [];
 
@@ -121,6 +129,7 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
       }
     });
 
+    console.log('🔍 Generated events:', calendarEvents.length, calendarEvents);
     return calendarEvents;
   }, [trip.activities, trip.restaurants]);
 
@@ -159,18 +168,66 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     </div>
   );
 
-  const AgendaEvent = ({ event }: { event: CalendarEvent }) => (
-    <div className={`rbc-event-content ${event.type}-event`}>
-      <div className="flex items-center space-x-2">
-        {event.type === 'activity' ? (
-          <CalendarIcon size={14} className="flex-shrink-0" />
-        ) : (
-          <UtensilsIcon size={14} className="flex-shrink-0" />
-        )}
-        <span className="font-medium">{event.title}</span>
+  const AgendaEvent = ({ event }: { event: CalendarEvent }) => {
+    // Clean up any invalid characters from location
+    const rawLocation = event.resource?.location || event.resource?.address || '';
+    const location = rawLocation.replace(/[^\w\s\-,.äöüÄÖÜß]/g, '').trim();
+    const mapsUrl = location ? `https://maps.google.com/maps?q=${encodeURIComponent(location)}` : '';
+    
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group p-4">
+        <div className="flex items-start justify-between">
+          {/* Event Info */}
+          <div className="flex-1">
+            <div className="flex items-center space-x-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                event.type === 'activity' 
+                  ? 'bg-blue-100 text-blue-600' 
+                  : 'bg-purple-100 text-purple-600'
+              }`}>
+                {event.type === 'activity' ? (
+                  <CalendarIcon size={16} />
+                ) : (
+                  <UtensilsIcon size={16} />
+                )}
+              </div>
+              <div>
+                <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  {event.title}
+                </h3>
+                <div className="flex items-center space-x-2 text-sm text-gray-500">
+                  <ClockIcon size={12} />
+                  <span>
+                    {format(event.start, 'HH:mm', { locale: de })} - {format(event.end, 'HH:mm', { locale: de })}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Location */}
+            {location && (
+              <div className="flex items-center space-x-2 mt-2">
+                <MapPinIcon size={12} className="text-gray-400 flex-shrink-0" />
+                <a
+                  href={mapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:text-blue-800 hover:underline text-sm font-medium transition-colors"
+                >
+                  {location}
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Bottom accent bar */}
+        <div className={`h-1 mt-3 rounded ${
+          event.type === 'activity' ? 'bg-blue-500' : 'bg-purple-500'
+        }`} />
       </div>
-    </div>
-  );
+    );
+  };
 
   // Modern Agenda Component
   const ModernAgenda = () => {
@@ -466,8 +523,6 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     monthHeaderFormat: (date: Date) => format(date, 'MMMM yyyy', { locale: de }),
   };
 
-
-
   // Effect to manually highlight trip dates after calendar renders
   useEffect(() => {
     if (!trip.startDate || !trip.endDate) return;
@@ -478,81 +533,122 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
       startDate.setHours(0, 0, 0, 0);
       
       const endDate = new Date(trip.endDate!);
-      endDate.setHours(23, 59, 59, 999);
+      endDate.setHours(0, 0, 0, 0); // Set to midnight of the end date
       
       console.log('🔍 Trip dates:', format(startDate, 'yyyy-MM-dd'), 'to', format(endDate, 'yyyy-MM-dd'));
       
-      // Much simpler approach: find all button links and try to match their dates
-      const buttonLinks = document.querySelectorAll('.react-big-calendar-custom .rbc-month-view .rbc-date-cell .rbc-button-link');
-      
-      console.log('🔍 Found', buttonLinks.length, 'button links');
-      
-      buttonLinks.forEach((button) => {
-        const buttonElement = button as HTMLElement;
-        const dateText = buttonElement.textContent?.trim();
+      if (currentView === Views.MONTH) {
+        // Handle month view button styling
+        const buttonLinks = document.querySelectorAll('.react-big-calendar-custom .rbc-month-view .rbc-date-cell .rbc-button-link');
         
-        if (!dateText || isNaN(parseInt(dateText))) return;
+        console.log('🔍 Found', buttonLinks.length, 'button links in month view');
         
-        const dayNumber = parseInt(dateText);
-        
-        // Reset all styles first
-        buttonElement.style.backgroundColor = '';
-        buttonElement.style.color = '';
-        buttonElement.style.fontWeight = '';
-        buttonElement.style.borderRadius = '';
-        buttonElement.style.border = '';
-        buttonElement.style.boxShadow = '';
-        
-        // Check if this button is in current month by checking if it's grayed out
-        const parentCell = buttonElement.closest('.rbc-date-cell') as HTMLElement;
-        const isOffRange = parentCell?.classList.contains('rbc-off-range');
-        
-        let buttonDate: Date;
-        
-        if (!isOffRange) {
-          // This is definitely in the current displayed month
-          buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
-        } else {
-          // This might be from previous or next month, but we still want to check if it's in trip range
-          // Try current month first
-          buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
+        buttonLinks.forEach((button) => {
+          const buttonElement = button as HTMLElement;
+          const dateText = buttonElement.textContent?.trim();
           
-          // If that doesn't work, try previous month
-          if (dayNumber > 15) {
-            buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, dayNumber);
+          if (!dateText || isNaN(parseInt(dateText))) return;
+          
+          const dayNumber = parseInt(dateText);
+          
+          // Reset all styles first
+          buttonElement.style.backgroundColor = '';
+          buttonElement.style.color = '';
+          buttonElement.style.fontWeight = '';
+          buttonElement.style.borderRadius = '';
+          buttonElement.style.border = '';
+          buttonElement.style.boxShadow = '';
+          
+          // Check if this button is in current month by checking if it's grayed out
+          const parentCell = buttonElement.closest('.rbc-date-cell') as HTMLElement;
+          const isOffRange = parentCell?.classList.contains('rbc-off-range');
+          
+          let buttonDate: Date;
+          
+          if (!isOffRange) {
+            // This is definitely in the current displayed month
+            buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
           } else {
-            // Try next month
-            buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, dayNumber);
+            // This might be from previous or next month, but we still want to check if it's in trip range
+            // Try current month first
+            buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNumber);
+            
+            // If that doesn't work, try previous month
+            if (dayNumber > 15) {
+              buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, dayNumber);
+            } else {
+              // Try next month
+              buttonDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, dayNumber);
+            }
+          }
+          
+          const buttonDateStr = format(buttonDate, 'yyyy-MM-dd');
+          
+          // Check if this date is within trip range (normalize buttonDate for comparison)
+          const normalizedButtonDate = new Date(buttonDate);
+          normalizedButtonDate.setHours(0, 0, 0, 0);
+          const isInTripRange = normalizedButtonDate >= startDate && normalizedButtonDate <= endDate;
+          
+          console.log('🔍 Checking date:', buttonDateStr, 'normalized:', format(normalizedButtonDate, 'yyyy-MM-dd'), 'inRange:', isInTripRange);
+          
+          if (isInTripRange) {
+            console.log('🟢 Highlighting date:', buttonDateStr);
+            
+            // Apply styles ONLY to button
+            buttonElement.style.backgroundColor = '#10B981';
+            buttonElement.style.color = 'white';
+            buttonElement.style.fontWeight = '600';
+            buttonElement.style.borderRadius = '8px';
+            buttonElement.style.border = '2px solid white';
+            buttonElement.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+          }
+        });
+      } else if (currentView === Views.WEEK || currentView === Views.DAY) {
+        // Handle week/day view header and column styling
+        const headers = document.querySelectorAll('.react-big-calendar-custom .rbc-time-header .rbc-header');
+        const daySlots = document.querySelectorAll('.react-big-calendar-custom .rbc-day-slot');
+        
+        console.log('🔍 Found', headers.length, 'headers and', daySlots.length, 'day slots in week/day view');
+        
+        // Clear previous trip-date classes
+        headers.forEach(header => header.classList.remove('trip-date'));
+        daySlots.forEach(slot => slot.classList.remove('trip-date'));
+        
+        // Check each day in the current week/day view
+        const viewStart = new Date(currentDate);
+        if (currentView === Views.WEEK) {
+          // For week view, get the start of the week (Monday = 1, Sunday = 0)
+          // In Germany, weeks start on Monday, but getDay() returns 0 for Sunday
+          const dayOfWeek = currentDate.getDay();
+          const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Convert Sunday=0 to 6, others subtract 1
+          viewStart.setDate(currentDate.getDate() - daysToSubtract);
+        }
+        viewStart.setHours(0, 0, 0, 0);
+        
+        console.log('🔍 Week view start:', format(viewStart, 'yyyy-MM-dd'), 'Current date:', format(currentDate, 'yyyy-MM-dd'));
+        
+        for (let i = 0; i < (currentView === Views.WEEK ? 7 : 1); i++) {
+          const checkDate = new Date(viewStart);
+          checkDate.setDate(viewStart.getDate() + i);
+          checkDate.setHours(0, 0, 0, 0);
+          
+          const isInTripRange = checkDate >= startDate && checkDate <= endDate;
+          
+          console.log('🔍 Week day', i, ':', format(checkDate, 'yyyy-MM-dd'), 'inRange:', isInTripRange);
+          
+          if (isInTripRange) {
+            console.log('🟢 Adding trip-date class for:', format(checkDate, 'yyyy-MM-dd'));
+            
+            // Add trip-date class to corresponding header and day slot
+            if (headers[i]) {
+              headers[i].classList.add('trip-date');
+            }
+            if (daySlots[i]) {
+              daySlots[i].classList.add('trip-date');
+            }
           }
         }
-        
-        const buttonDateStr = format(buttonDate, 'yyyy-MM-dd');
-        
-        console.log('🔍 Checking date:', buttonDateStr, 'day:', dayNumber, 'isOffRange:', isOffRange);
-        
-        // Check if this date is within trip range
-        const isInTripRange = buttonDate >= startDate && buttonDate <= endDate;
-        console.log('🔍 Date comparison for', buttonDateStr, ':', {
-          buttonDate: buttonDate.getTime(),
-          startDate: startDate.getTime(), 
-          endDate: endDate.getTime(),
-          isAfterStart: buttonDate >= startDate,
-          isBeforeEnd: buttonDate <= endDate,
-          isInRange: isInTripRange
-        });
-        
-        if (isInTripRange) {
-          console.log('🟢 Highlighting date:', buttonDateStr);
-          
-          // Apply styles ONLY to button
-          buttonElement.style.backgroundColor = '#10B981';
-          buttonElement.style.color = 'white';
-          buttonElement.style.fontWeight = '600';
-          buttonElement.style.borderRadius = '8px';
-          buttonElement.style.border = '2px solid white';
-          buttonElement.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
-        }
-      });
+      }
     };
 
     // Run immediately and on calendar changes
@@ -561,7 +657,7 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     return () => clearTimeout(timeoutId);
   }, [trip.startDate, trip.endDate, currentDate, currentView]);
 
-      return (
+  return (
     <div className="space-y-8">
       {/* Ultra-Modern Calendar Card */}
       <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-lg">
@@ -604,10 +700,81 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
               </Button>
             </div>
           )}
-          {/* Conditional rendering based on view */}
+          {/* Calendar with custom agenda rendering */}
           {currentView === Views.AGENDA ? (
-            <div style={{ height: '650px', overflowY: 'auto' }} className="bg-gray-50 rounded-lg">
-              <ModernAgenda />
+            <div>
+              {/* Custom navigation bar for agenda */}
+              <div style={{ marginBottom: '20px' }}>
+                <div className="rbc-toolbar">
+                  <span className="rbc-btn-group">
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentDate(new Date())}
+                      className="rbc-btn"
+                    >
+                      Heute
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const newDate = new Date(currentDate);
+                        newDate.setMonth(newDate.getMonth() - 1);
+                        setCurrentDate(newDate);
+                      }}
+                      className="rbc-btn"
+                    >
+                      ‹
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        const newDate = new Date(currentDate);
+                        newDate.setMonth(newDate.getMonth() + 1);
+                        setCurrentDate(newDate);
+                      }}
+                      className="rbc-btn"
+                    >
+                      ›
+                    </button>
+                  </span>
+                  <span className="rbc-toolbar-label">
+                    {format(currentDate, 'MMMM yyyy', { locale: de })}
+                  </span>
+                  <span className="rbc-btn-group">
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentView(Views.MONTH)}
+                      className="rbc-btn"
+                    >
+                      Monat
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentView(Views.WEEK)}
+                      className="rbc-btn"
+                    >
+                      Woche
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setCurrentView(Views.DAY)}
+                      className="rbc-btn"
+                    >
+                      Tag
+                    </button>
+                    <button 
+                      type="button" 
+                      className="rbc-btn rbc-active"
+                    >
+                      Agenda
+                    </button>
+                  </span>
+                </div>
+              </div>
+              {/* Modern Agenda Component */}
+              <div style={{ height: '650px', overflowY: 'auto' }} className="bg-gray-50 rounded-lg">
+                <ModernAgenda />
+              </div>
             </div>
           ) : (
             <div style={{ height: '650px', display: 'flex', flexDirection: 'column' }} className="modern-calendar">
