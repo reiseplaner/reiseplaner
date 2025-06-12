@@ -50,18 +50,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+  // Debug route to check uploads directory
+  app.get('/api/debug/uploads', async (req, res) => {
+    try {
+      const uploadsPath = path.join(process.cwd(), 'uploads');
+      const profilesPath = path.join(uploadsPath, 'profiles');
+      
+      console.log('🔍 Debug uploads check:');
+      console.log('  - Uploads path:', uploadsPath);
+      console.log('  - Profiles path:', profilesPath);
+      
+      const result: {
+        uploadsExists: boolean;
+        profilesExists: boolean;
+        uploadsPath: string;
+        profilesPath: string;
+        files: Array<{ name: string; size: number; url: string }>;
+      } = {
+        uploadsExists: fs.existsSync(uploadsPath),
+        profilesExists: fs.existsSync(profilesPath),
+        uploadsPath,
+        profilesPath,
+        files: []
+      };
+      
+      if (fs.existsSync(profilesPath)) {
+        result.files = fs.readdirSync(profilesPath).map(file => {
+          const filePath = path.join(profilesPath, file);
+          const stats = fs.statSync(filePath);
+          return {
+            name: file,
+            size: stats.size,
+            url: `/uploads/profiles/${file}`
+          };
+        });
+      }
+      
+      console.log('🔍 Debug result:', result);
+      res.json(result);
+    } catch (error: any) {
+      console.error('🔴 Debug uploads error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', supabaseAuth, async (req: any, res) => {
     try {
       const supabaseUser = req.user;
       
-      // Ensure user exists in our database
-      const dbUser = await storage.upsertUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email,
-        firstName: supabaseUser.user_metadata?.full_name?.split(' ')[0] || null,
-        lastName: supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
-        profileImageUrl: supabaseUser.user_metadata?.avatar_url || null,
+      // First, check if user already exists in our database
+      let dbUser = await storage.getUser(supabaseUser.id);
+      
+      if (!dbUser) {
+        // User doesn't exist, create new user with Supabase metadata
+        console.log(`🔧 Creating new user ${supabaseUser.id} in database`);
+        console.log(`🔧 Using Supabase avatar: ${supabaseUser.user_metadata?.avatar_url || 'none'}`);
+        dbUser = await storage.upsertUser({
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          firstName: supabaseUser.user_metadata?.full_name?.split(' ')[0] || null,
+          lastName: supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
+          profileImageUrl: supabaseUser.user_metadata?.avatar_url || null,
+        });
+      } else {
+        // User exists, only update basic info but preserve profileImageUrl
+        console.log(`🔧 Updating existing user ${supabaseUser.id} (preserving profileImageUrl)`);
+        console.log(`🔧 Preserving existing profileImageUrl: ${dbUser.profileImageUrl || 'none'}`);
+        dbUser = await storage.upsertUser({
+          id: supabaseUser.id,
+          email: supabaseUser.email,
+          firstName: supabaseUser.user_metadata?.full_name?.split(' ')[0] || dbUser.firstName,
+          lastName: supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || dbUser.lastName,
+          profileImageUrl: dbUser.profileImageUrl, // Preserve existing profileImageUrl
+        });
+      }
+      
+      console.log(`🔍 Auth /user response for ${supabaseUser.id}:`, {
+        id: dbUser.id,
+        email: dbUser.email,
+        profileImageUrl: dbUser.profileImageUrl,
+        firstName: dbUser.firstName,
+        lastName: dbUser.lastName
       });
       
       // Return the database user info, not the Supabase user
@@ -94,14 +164,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       console.log(`✅ Profile image updated for user ${userId}: ${imageUrl}`);
+      
+      // Force invalidate React Query cache to show the update immediately
       res.json({ 
         message: "Profilbild erfolgreich hochgeladen", 
         user: updatedUser,
-        imageUrl 
+        imageUrl,
+        profileImageUrl: imageUrl, // Make sure both fields are provided
+        success: true
       });
     } catch (error) {
       console.error("🔴 Error uploading profile image:", error);
       res.status(500).json({ message: "Failed to upload profile image" });
+    }
+  });
+
+  // Get current profile image URL
+  app.get('/api/auth/profile-image', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      console.log(`🔍 Getting profile image for user ${userId}: ${user?.profileImageUrl || 'none'}`);
+      
+      res.json({ 
+        profileImageUrl: user?.profileImageUrl || null,
+        hasProfileImage: !!user?.profileImageUrl
+      });
+    } catch (error) {
+      console.error("🔴 Error getting profile image:", error);
+      res.status(500).json({ message: "Failed to get profile image" });
     }
   });
 
@@ -988,8 +1080,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
-
-
 
   const httpServer = createServer(app);
   return httpServer;

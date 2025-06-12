@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
@@ -33,11 +33,63 @@ export default function ProfileDropdown() {
   const { user, dbUser, signOut } = useAuth();
   const [, setLocation] = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [cachedProfileImageUrl, setCachedProfileImageUrl] = useState<string | null>(null);
 
   const { data: subscriptionInfo } = useQuery<SubscriptionInfo>({
     queryKey: ["/api/user/subscription"],
     retry: false,
   });
+
+  // Additional query to get the correct profile image
+  const { data: profileImageData } = useQuery<{ profileImageUrl: string | null; hasProfileImage: boolean }>({
+    queryKey: ['/api/auth/profile-image'],
+    enabled: !!dbUser && !cachedProfileImageUrl,
+    retry: false,
+  });
+
+  // Load cached profile image from localStorage
+  useEffect(() => {
+    if (dbUser?.id && !cachedProfileImageUrl) {
+      const cachedUrl = localStorage.getItem(`profileImage_${dbUser.id}`);
+      if (cachedUrl) {
+        console.log('💾 ProfileDropdown: Loading cached profile image from localStorage:', cachedUrl);
+        setCachedProfileImageUrl(cachedUrl);
+      }
+    }
+  }, [dbUser?.id, cachedProfileImageUrl]);
+
+  // Listen for localStorage changes (when profile image is updated in other components)
+  useEffect(() => {
+    const handleProfileImageUpdate = (e: CustomEvent) => {
+      const { userId, imageUrl } = e.detail;
+      if (userId === dbUser?.id) {
+        console.log('💾 ProfileDropdown: Detected profile image update via custom event:', imageUrl);
+        setCachedProfileImageUrl(imageUrl);
+      }
+    };
+
+    window.addEventListener('profileImageUpdated', handleProfileImageUpdate as EventListener);
+    return () => window.removeEventListener('profileImageUpdated', handleProfileImageUpdate as EventListener);
+  }, [dbUser?.id]);
+
+  // Helper function to get proper image URL
+  const getImageUrl = (profileImageUrl: string | null | undefined): string => {
+    // Priority order: 1. Cache, 2. API response, 3. dbUser, 4. empty
+    const bestUrl = cachedProfileImageUrl || 
+                   profileImageData?.profileImageUrl || 
+                   profileImageUrl || 
+                   "";
+    
+    if (!bestUrl) return "";
+    
+    // If already absolute URL, return as is
+    if (bestUrl.startsWith('http')) {
+      return bestUrl;
+    }
+    
+    // Convert relative URL to absolute
+    return `${window.location.origin}${bestUrl}`;
+  };
 
   const getInitials = (firstName?: string | null, lastName?: string | null) => {
     const first = firstName?.charAt(0) || "";
@@ -74,8 +126,19 @@ export default function ProfileDropdown() {
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8">
               <AvatarImage 
-                src={dbUser.profileImageUrl || ""} 
+                src={getImageUrl(dbUser.profileImageUrl) || ""} 
                 alt={`${dbUser.firstName} ${dbUser.lastName}`} 
+                onError={(e) => {
+                  console.error('🔴 ProfileDropdown: Profilbild konnte nicht geladen werden:', dbUser.profileImageUrl);
+                  console.error('🔴 ProfileDropdown: Cache:', cachedProfileImageUrl);
+                  console.error('🔴 ProfileDropdown: API:', profileImageData?.profileImageUrl);
+                }}
+                onLoad={() => {
+                  console.log('✅ ProfileDropdown: Profilbild erfolgreich geladen');
+                  console.log('✅ ProfileDropdown: Cache:', cachedProfileImageUrl);
+                  console.log('✅ ProfileDropdown: API:', profileImageData?.profileImageUrl);
+                  console.log('✅ ProfileDropdown: dbUser:', dbUser.profileImageUrl);
+                }}
               />
               <AvatarFallback className="text-sm">
                 {getInitials(dbUser.firstName, dbUser.lastName)}

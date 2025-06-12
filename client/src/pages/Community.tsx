@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import Navigation from "@/components/Navigation";
@@ -18,8 +19,8 @@ type TripWithUpvotes = PublicTripWithUser & {
 };
 
 export default function Community() {
-  const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
   // Filter states
@@ -551,6 +552,34 @@ export default function Community() {
     }
   };
 
+  // Helper function to get profile image for a user
+  const getUserProfileImage = (userId: string): string => {
+    // Try to get from localStorage first
+    const cachedUrl = localStorage.getItem(`profileImage_${userId}`);
+    if (cachedUrl) {
+      console.log('💾 Community: Using cached profile image for user', userId, ':', cachedUrl);
+      return cachedUrl.startsWith('http') ? cachedUrl : `${window.location.origin}${cachedUrl}`;
+    }
+    return "";
+  };
+
+  // Helper function to get user initials
+  const getUserInitials = (user: any): string => {
+    return (user?.username?.[0] || user?.firstName?.[0] || "A").toUpperCase();
+  };
+
+  // Listen for profile image updates and refresh the page
+  useEffect(() => {
+    const handleProfileImageUpdate = (e: CustomEvent) => {
+      console.log('💾 Community: Detected profile image update, refreshing trips');
+      // Invalidate the trips query to refresh the data
+      queryClient.invalidateQueries({ queryKey: ["/api/trips/public"] });
+    };
+
+    window.addEventListener('profileImageUpdated', handleProfileImageUpdate as EventListener);
+    return () => window.removeEventListener('profileImageUpdated', handleProfileImageUpdate as EventListener);
+  }, [queryClient]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -745,11 +774,21 @@ export default function Community() {
                     {/* Author und Action */}
                     <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                       <div className="flex items-center">
-                        <div className="w-8 h-8 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full mr-2 flex items-center justify-center">
-                          <span className="text-white text-xs font-semibold">
-                            {(trip.user?.username?.[0] || trip.user?.firstName?.[0] || "A").toUpperCase()}
-                          </span>
-                        </div>
+                        <Avatar className="h-8 w-8 mr-2">
+                          <AvatarImage 
+                            src={getUserProfileImage(trip.user?.id || '')} 
+                            alt={`${trip.user?.firstName} ${trip.user?.lastName}`}
+                            onError={() => {
+                              console.log('🔴 Community: Profilbild konnte nicht geladen werden für User:', trip.user?.id);
+                            }}
+                            onLoad={() => {
+                              console.log('✅ Community: Profilbild erfolgreich geladen für User:', trip.user?.id);
+                            }}
+                          />
+                          <AvatarFallback className="text-xs bg-gradient-to-br from-purple-400 to-blue-500 text-white">
+                            {getUserInitials(trip.user)}
+                          </AvatarFallback>
+                        </Avatar>
                         <span className="text-sm text-slate-600">
                           {trip.user?.username || 
                            (trip.user?.firstName && trip.user?.lastName ? 

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -33,11 +33,86 @@ export default function Profile() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [cachedProfileImageUrl, setCachedProfileImageUrl] = useState<string | null>(null);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: ""
   });
+
+  // Additional query to get the correct profile image
+  const { data: profileImageData } = useQuery<{ profileImageUrl: string | null; hasProfileImage: boolean }>({
+    queryKey: ['/api/auth/profile-image'],
+    enabled: !!dbUser && !cachedProfileImageUrl,
+    retry: false,
+  });
+
+  // Debug logging
+  useEffect(() => {
+    if (dbUser) {
+      console.log('🔍 Debug - dbUser:', dbUser);
+      console.log('🔍 Debug - profileImageUrl:', dbUser?.profileImageUrl);
+      console.log('🔍 Debug - cachedProfileImageUrl:', cachedProfileImageUrl);
+      console.log('🔍 Debug - profileImageData:', profileImageData);
+      
+      // Show the final URL that will be used
+      const finalUrl = getImageUrl(dbUser?.profileImageUrl);
+      console.log('🔍 Debug - final image URL:', finalUrl);
+      console.log('🔍 Debug - hasProfileImage():', hasProfileImage());
+      
+      // Test absolute URL generation
+      if (dbUser.profileImageUrl) {
+        const absoluteUrl = dbUser.profileImageUrl.startsWith('http') 
+          ? dbUser.profileImageUrl 
+          : `${window.location.origin}${dbUser.profileImageUrl}`;
+        console.log('🔍 Debug - absolute URL:', absoluteUrl);
+        
+        // Test if image is accessible
+        fetch(absoluteUrl, { method: 'HEAD' })
+          .then(response => {
+            console.log('🔍 Image accessibility test:', response.status, response.statusText);
+          })
+          .catch(error => {
+            console.error('🔴 Image accessibility test failed:', error);
+          });
+      }
+      
+      // Load cached profile image from localStorage if available and dbUser has no profileImageUrl
+      if (!dbUser.profileImageUrl && !cachedProfileImageUrl) {
+        const cachedUrl = localStorage.getItem(`profileImage_${dbUser.id}`);
+        if (cachedUrl) {
+          console.log('💾 Loading cached profile image from localStorage:', cachedUrl);
+          setCachedProfileImageUrl(cachedUrl);
+        }
+      }
+    }
+  }, [dbUser, cachedProfileImageUrl, profileImageData]);
+
+  // Helper function to get proper image URL
+  const getImageUrl = (profileImageUrl: string | null | undefined): string => {
+    // Priority order: 1. Cache, 2. API response, 3. dbUser, 4. empty
+    const bestUrl = cachedProfileImageUrl || 
+                   profileImageData?.profileImageUrl || 
+                   profileImageUrl || 
+                   "";
+    
+    if (!bestUrl) return "";
+    
+    // If already absolute URL, return as is
+    if (bestUrl.startsWith('http')) {
+      return bestUrl;
+    }
+    
+    // Convert relative URL to absolute
+    return `${window.location.origin}${bestUrl}`;
+  };
+
+  // Helper function to check if any profile image is available
+  const hasProfileImage = (): boolean => {
+    return !!(cachedProfileImageUrl || profileImageData?.profileImageUrl || dbUser?.profileImageUrl);
+  };
+
+
 
   // Profile image upload mutation
   const uploadImageMutation = useMutation({
@@ -52,6 +127,23 @@ export default function Profile() {
     },
     onSuccess: (data) => {
       console.log('✅ Upload successful:', data);
+      
+      // Cache the uploaded image URL immediately
+      const uploadedImageUrl = data.imageUrl || data.profileImageUrl;
+      setCachedProfileImageUrl(uploadedImageUrl);
+      console.log('💾 Cached profile image URL:', uploadedImageUrl);
+      
+      // Also store in localStorage for persistence across page reloads
+      if (uploadedImageUrl && dbUser?.id) {
+        localStorage.setItem(`profileImage_${dbUser.id}`, uploadedImageUrl);
+        console.log('💾 Saved profile image to localStorage');
+        
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new CustomEvent('profileImageUpdated', {
+          detail: { userId: dbUser.id, imageUrl: uploadedImageUrl }
+        }));
+      }
+      
       toast({
         title: "Profilbild aktualisiert",
         description: "Dein Profilbild wurde erfolgreich hochgeladen.",
@@ -236,8 +328,14 @@ export default function Profile() {
                   <div className="relative">
                     <Avatar className="h-24 w-24">
                       <AvatarImage 
-                        src={dbUser?.profileImageUrl || ""} 
+                        src={cachedProfileImageUrl || getImageUrl(dbUser?.profileImageUrl) || ""} 
                         alt={`${dbUser?.firstName} ${dbUser?.lastName}`} 
+                        onError={(e) => {
+                          console.error('🔴 Profilbild konnte nicht geladen werden:', dbUser?.profileImageUrl);
+                        }}
+                        onLoad={() => {
+                          console.log('✅ Profilbild erfolgreich geladen:', dbUser?.profileImageUrl);
+                        }}
                       />
                       <AvatarFallback className="text-lg">
                         {getInitials(dbUser?.firstName, dbUser?.lastName)}
@@ -246,6 +344,7 @@ export default function Profile() {
                     <label 
                       htmlFor="profile-image-upload"
                       className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors"
+                      title="Profilbild ändern"
                     >
                       {isUploadingImage ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -270,6 +369,11 @@ export default function Profile() {
                     <p className="text-sm text-slate-500 mt-1">
                       Klicke auf das Kamera-Symbol, um dein Profilbild zu ändern
                     </p>
+                    {!hasProfileImage() && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        💡 Noch kein Profilbild hochgeladen
+                      </p>
+                    )}
                   </div>
                 </div>
 

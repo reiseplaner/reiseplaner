@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
@@ -432,9 +433,17 @@ export default function PublicTripDetail() {
                   Noch keine Kommentare. Sei der Erste!
                 </p>
               ) : (
-                trip.comments.map((comment) => (
-                  <div key={comment.id} className="flex space-x-3">
-                    <div className="w-8 h-8 bg-slate-300 rounded-full flex-shrink-0"></div>
+                                  trip.comments.map((comment) => (
+                    <div key={comment.id} className="flex space-x-3">
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarImage 
+                          src={localStorage.getItem(`profileImage_${comment.userId}`) || ""} 
+                          alt={comment.user.username || `${comment.user.firstName} ${comment.user.lastName}` || "Anonymer Benutzer"} 
+                        />
+                        <AvatarFallback className="bg-slate-300 text-slate-600">
+                          {(comment.user.username?.[0] || comment.user.firstName?.[0] || "A").toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
