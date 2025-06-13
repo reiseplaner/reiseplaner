@@ -781,82 +781,83 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
                   </Button>
                 </div>
               )}
-          {/* Calendar with custom agenda rendering */}
-          {currentView === Views.AGENDA ? (
-            <div>
-              {/* Custom navigation bar for agenda */}
-              <div style={{ marginBottom: '20px' }}>
-                <div className="rbc-toolbar">
-                  <span className="rbc-btn-group">
-                    <button 
-                      type="button" 
-                      onClick={() => setCurrentDate(new Date())}
-                      className="rbc-btn"
-                    >
-                      Heute
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const newDate = new Date(currentDate);
-                        newDate.setMonth(newDate.getMonth() - 1);
-                        setCurrentDate(newDate);
-                      }}
-                      className="rbc-btn"
-                    >
-                      ‹
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => {
-                        const newDate = new Date(currentDate);
-                        newDate.setMonth(newDate.getMonth() + 1);
-                        setCurrentDate(newDate);
-                      }}
-                      className="rbc-btn"
-                    >
-                      ›
-                    </button>
-                  </span>
-                  <span className="rbc-toolbar-label">
-                    {format(currentDate, 'MMMM yyyy', { locale: de })}
-                  </span>
-                  <span className="rbc-btn-group">
-                    <button 
-                      type="button" 
-                      onClick={() => setCurrentView(Views.MONTH)}
-                      className="rbc-btn"
-                    >
-                      Monat
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setCurrentView(Views.WEEK)}
-                      className="rbc-btn"
-                    >
-                      Woche
-                    </button>
-                    <button 
-                      type="button" 
-                      onClick={() => setCurrentView(Views.DAY)}
-                      className="rbc-btn"
-                    >
-                      Tag
-                    </button>
-                    <button 
-                      type="button" 
-                      className="rbc-btn rbc-active"
-                    >
-                      Agenda
-                    </button>
-                  </span>
+              
+              {/* Calendar with custom agenda rendering */}
+              {currentView === Views.AGENDA ? (
+                <div>
+                  {/* Custom navigation bar for agenda */}
+                  <div style={{ marginBottom: '20px' }}>
+                    <div className="rbc-toolbar">
+                      <span className="rbc-btn-group">
+                        <button 
+                          type="button" 
+                          onClick={() => setCurrentDate(new Date())}
+                          className="rbc-btn"
+                        >
+                          Heute
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const newDate = new Date(currentDate);
+                            newDate.setMonth(newDate.getMonth() - 1);
+                            setCurrentDate(newDate);
+                          }}
+                          className="rbc-btn"
+                        >
+                          ‹
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const newDate = new Date(currentDate);
+                            newDate.setMonth(newDate.getMonth() + 1);
+                            setCurrentDate(newDate);
+                          }}
+                          className="rbc-btn"
+                        >
+                          ›
+                        </button>
+                      </span>
+                      <span className="rbc-toolbar-label">
+                        {format(currentDate, 'MMMM yyyy', { locale: de })}
+                      </span>
+                      <span className="rbc-btn-group">
+                        <button 
+                          type="button" 
+                          onClick={() => setCurrentView(Views.MONTH)}
+                          className="rbc-btn"
+                        >
+                          Monat
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => setCurrentView(Views.WEEK)}
+                          className="rbc-btn"
+                        >
+                          Woche
+                        </button>
+                        <button 
+                          type="button" 
+                          onClick={() => setCurrentView(Views.DAY)}
+                          className="rbc-btn"
+                        >
+                          Tag
+                        </button>
+                        <button 
+                          type="button" 
+                          className="rbc-btn rbc-active"
+                        >
+                          Agenda
+                        </button>
+                      </span>
+                    </div>
+                  </div>
+                  {/* Modern Agenda Component */}
+                  <div style={{ height: '650px', overflowY: 'auto' }} className="bg-gray-50 rounded-lg">
+                    <ModernAgenda />
+                  </div>
                 </div>
-              </div>
-              {/* Modern Agenda Component */}
-              <div style={{ height: '650px', overflowY: 'auto' }} className="bg-gray-50 rounded-lg">
-                <ModernAgenda />
-              </div>
-            </div>
           ) : (
             <div style={{ height: '650px', display: 'flex', flexDirection: 'column' }} className="modern-calendar">
               <Calendar
@@ -929,6 +930,8 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
                 }}
               />
             </div>
+          )}
+            </>
           )}
         </CardContent>
       </Card>
