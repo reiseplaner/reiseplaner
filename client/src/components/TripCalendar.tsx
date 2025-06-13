@@ -6,13 +6,22 @@ import { de } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, ClockIcon, MapPinIcon, UtensilsIcon, Download } from "lucide-react";
+import { CalendarIcon, ClockIcon, MapPinIcon, UtensilsIcon, Download, Lock, Crown } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import type { TripWithDetails } from "@shared/schema";
+import UpgradeModal from "./UpgradeModal";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import "./calendar-styles.css";
 
 interface TripCalendarProps {
   trip: TripWithDetails;
+}
+
+interface SubscriptionInfo {
+  status: 'free' | 'pro' | 'veteran';
+  tripsUsed: number;
+  tripsLimit: number;
+  canExport: boolean;
 }
 
 const locales = {
@@ -44,6 +53,17 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
     }
     return new Date();
   });
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<'calendar' | 'export'>('calendar');
+
+  // Get subscription info
+  const { data: subscriptionInfo } = useQuery<SubscriptionInfo>({
+    queryKey: ["/api/user/subscription"],
+    retry: false,
+  });
+
+  const isFreePlan = !subscriptionInfo || subscriptionInfo.status === 'free';
+  const canExport = subscriptionInfo?.canExport || false;
 
   // Debug: Log when component renders
   console.log('🔍 TripCalendar render:', {
@@ -330,6 +350,13 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
   };
 
   const exportToPDF = async () => {
+    // Check if user can export
+    if (!canExport) {
+      setUpgradeFeature('export');
+      setShowUpgradeModal(true);
+      return;
+    }
+
     try {
       // Dynamic import of jsPDF
       const { jsPDF } = await import('jspdf');
@@ -659,17 +686,25 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
 
   return (
     <div className="space-y-8">
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        feature={upgradeFeature}
+      />
+
       {/* Ultra-Modern Calendar Card */}
       <Card className="border-0 shadow-xl bg-white/95 backdrop-blur-lg">
         <CardHeader className="pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <div className="p-2 bg-blue-500 rounded-xl">
+              <div className={`p-2 rounded-xl ${isFreePlan ? 'bg-gray-400' : 'bg-blue-500'}`}>
                 <CalendarIcon className="h-6 w-6 text-white" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold text-gray-900">
-                  Reise-Kalender
+                <CardTitle className="text-2xl font-bold text-gray-900 flex items-center space-x-2">
+                  <span>Reise-Kalender</span>
+                  {isFreePlan && <Lock className="h-5 w-5 text-gray-400" />}
                 </CardTitle>
                 <p className="text-gray-500 mt-1">
                   {trip.startDate && trip.endDate 
@@ -687,19 +722,65 @@ export default function TripCalendar({ trip }: TripCalendarProps) {
           </div>
         </CardHeader>
         <CardContent className="p-8">
-          {/* PDF Export Button - only visible in Agenda view */}
-          {currentView === Views.AGENDA && events.length > 0 && (
-            <div className="mb-4 flex justify-end">
+          {/* Premium Feature Block for Free Users */}
+          {isFreePlan ? (
+            <div className="text-center py-16 space-y-6">
+              <div className="relative">
+                <div className="p-4 bg-gradient-to-br from-purple-100 to-blue-100 rounded-full w-24 h-24 mx-auto flex items-center justify-center">
+                  <Crown className="h-12 w-12 text-purple-600" />
+                </div>
+                <div className="absolute -top-2 -right-2 bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-1 rounded-full">
+                  PRO
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <h3 className="text-xl font-bold text-gray-900">
+                  Kalender-Funktion freischalten
+                </h3>
+                <p className="text-gray-600 max-w-md mx-auto">
+                  Organisieren Sie Ihre Reise mit unserem interaktiven Kalender. 
+                  Sehen Sie alle Aktivitäten und Restaurants in der Zeitübersicht.
+                </p>
+              </div>
+
+              <div className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg p-4 max-w-sm mx-auto">
+                <div className="text-2xl font-bold text-purple-600 mb-2">
+                  €4.99<span className="text-sm font-normal text-gray-500">/Monat</span>
+                </div>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  <li>✓ Bis zu 10 Reisen</li>
+                  <li>✓ Interaktiver Kalender</li>
+                  <li>✓ PDF Export</li>
+                  <li>✓ Premium Support</li>
+                </ul>
+              </div>
+
               <Button
-                onClick={exportToPDF}
-                variant="outline"
-                className="flex items-center space-x-2 hover:bg-blue-50 border-blue-200"
+                onClick={() => {
+                  setUpgradeFeature('calendar');
+                  setShowUpgradeModal(true);
+                }}
+                className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-semibold px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
               >
-                <Download size={16} />
-                <span>Agenda als PDF exportieren</span>
+                Jetzt freischalten
               </Button>
             </div>
-          )}
+          ) : (
+            <>
+              {/* PDF Export Button - only visible in Agenda view */}
+              {currentView === Views.AGENDA && events.length > 0 && (
+                <div className="mb-4 flex justify-end">
+                  <Button
+                    onClick={exportToPDF}
+                    variant="outline"
+                    className="flex items-center space-x-2 hover:bg-blue-50 border-blue-200"
+                  >
+                    <Download size={16} />
+                    <span>Agenda als PDF exportieren</span>
+                  </Button>
+                </div>
+              )}
           {/* Calendar with custom agenda rendering */}
           {currentView === Views.AGENDA ? (
             <div>
