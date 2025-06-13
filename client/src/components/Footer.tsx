@@ -18,20 +18,14 @@ export default function Footer() {
           
           {/* Links */}
           <div className="flex items-center space-x-6 text-sm">
-            <Link href="/impressum">
-              <a className="text-gray-600 hover:text-gray-900 transition-colors">
-                Impressum
-              </a>
+            <Link href="/impressum" className="text-gray-600 hover:text-gray-900 transition-colors">
+              Impressum
             </Link>
-            <Link href="/datenschutz">
-              <a className="text-gray-600 hover:text-gray-900 transition-colors">
-                Datenschutz
-              </a>
+            <Link href="/datenschutz" className="text-gray-600 hover:text-gray-900 transition-colors">
+              Datenschutz
             </Link>
-            <Link href="/cookie-einstellungen">
-              <a className="text-gray-600 hover:text-gray-900 transition-colors">
-                Cookie-Einstellungen
-              </a>
+            <Link href="/cookie-einstellungen" className="text-gray-600 hover:text-gray-900 transition-colors">
+              Cookie-Einstellungen
             </Link>
             <span className="text-gray-400">|</span>
             <span className="text-gray-500">
