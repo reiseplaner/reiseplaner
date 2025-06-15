@@ -158,19 +158,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-slate-50">
       <Navigation />
       
-      {/* Emergency reset button if auth is broken */}
-      {!user && (
-        <div className="fixed top-4 right-4 z-50">
-          <Button 
-            onClick={handleEmergencyReset}
-            className="bg-red-600 text-white hover:bg-red-700 shadow-lg"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Notfall-Reset
-          </Button>
-        </div>
-      )}
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Header */}
         <div className="flex justify-between items-center mb-8">
@@ -178,16 +165,6 @@ export default function Dashboard() {
             <h1 className="text-3xl font-bold text-slate-900">Meine Reisen</h1>
             <p className="text-slate-600 mt-1">
               Verwalte und plane deine Reisen
-              {!user && (
-                <span className="ml-4">
-                  <button 
-                    onClick={handleEmergencyReset}
-                    className="text-red-600 underline hover:text-red-800"
-                  >
-                    → Authentifizierung zurücksetzen
-                  </button>
-                </span>
-              )}
             </p>
           </div>
           <Button 
