@@ -58,6 +58,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
     canExport: true,
     features: [
       'Bis zu 10 Reisen',
+      'Interaktiver Reise-Kalender',
       'Reisen exportieren (PDF)',
       'Erweiterte Budgettools',
       'Premium Support',

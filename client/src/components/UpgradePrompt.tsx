@@ -79,6 +79,7 @@ export default function UpgradePrompt({
                 </div>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• Bis zu 10 Reisen</li>
+                  <li>• Interaktiver Reise-Kalender</li>
                   <li>• Reisen exportieren (PDF)</li>
                   <li>• Premium Support</li>
                 </ul>
