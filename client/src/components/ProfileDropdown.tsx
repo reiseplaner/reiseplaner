@@ -38,6 +38,9 @@ export default function ProfileDropdown() {
   const { data: subscriptionInfo } = useQuery<SubscriptionInfo>({
     queryKey: ["/api/user/subscription"],
     retry: false,
+    staleTime: 0, // Always consider data stale
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   // Additional query to get the correct profile image

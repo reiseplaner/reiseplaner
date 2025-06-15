@@ -198,6 +198,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin route to update subscription status
+  app.post('/api/admin/update-subscription', async (req, res) => {
+    try {
+      const { email, subscriptionStatus } = req.body;
+      
+      if (!email || !subscriptionStatus) {
+        return res.status(400).json({ error: 'Email and subscriptionStatus are required' });
+      }
+      
+      // Find user by email
+      const users = await storage.getAllUsers();
+      const user = users.find((u: any) => u.email === email);
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      // Update subscription status
+      await storage.updateUserSubscription(user.id, subscriptionStatus);
+      
+      console.log(`✅ Updated ${email} to ${subscriptionStatus} plan`);
+      
+      res.json({ 
+        success: true, 
+        message: `Successfully updated ${email} to ${subscriptionStatus} plan`,
+        user: {
+          email: user.email,
+          subscriptionStatus
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error updating subscription:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+
   // Change password
   app.post('/api/auth/change-password', supabaseAuth, async (req: any, res) => {
     try {

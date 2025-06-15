@@ -54,6 +54,9 @@ export default function CostSharingTab({ trip }: CostSharingTabProps) {
   const { data: subscriptionInfo, isLoading: isLoadingSubscription } = useQuery<SubscriptionInfo>({
     queryKey: ["/api/user/subscription"],
     retry: false,
+    staleTime: 0, // Always consider data stale
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   const [selectedType, setSelectedType] = useState<'budget' | 'activity' | 'restaurant'>('budget');

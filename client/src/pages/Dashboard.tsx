@@ -55,9 +55,17 @@ export default function Dashboard() {
     retry: false,
   });
 
-  const { data: subscriptionInfo } = useQuery({
+  const { data: subscriptionInfo } = useQuery<{
+    status: 'free' | 'pro' | 'veteran';
+    tripsUsed: number;
+    tripsLimit: number;
+    canExport: boolean;
+  }>({
     queryKey: ["/api/user/subscription"],
     retry: false,
+    staleTime: 0, // Always consider data stale
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
   });
 
   const createTripMutation = useMutation({
