@@ -16,24 +16,33 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 
 interface ShareTripDialogProps {
-  tripId: number;
-  tripName: string;
+  tripId?: number;
+  tripName?: string;
   isAlreadyShared?: boolean;
   existingDescription?: string;
   publicSlug?: string;
+  trip?: any;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 export default function ShareTripDialog({ 
-  tripId, 
-  tripName, 
-  isAlreadyShared, 
-  existingDescription,
-  publicSlug,
+  tripId: propTripId, 
+  tripName: propTripName, 
+  isAlreadyShared: propIsAlreadyShared, 
+  existingDescription: propExistingDescription,
+  publicSlug: propPublicSlug,
+  trip,
   open,
   onOpenChange
 }: ShareTripDialogProps) {
+  // Extract values from trip object if provided, otherwise use individual props
+  const tripId = trip?.id ?? propTripId;
+  const tripName = trip?.name ?? propTripName;
+  const isAlreadyShared = trip?.isPublic ?? propIsAlreadyShared;
+  const existingDescription = trip?.description ?? propExistingDescription;
+  const publicSlug = trip?.publicSlug ?? propPublicSlug;
+
   const [description, setDescription] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
