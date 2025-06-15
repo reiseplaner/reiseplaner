@@ -73,6 +73,7 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
     canExport: true,
     features: [
       'Unbegrenzte Reisen',
+      'Erweiterte Kostenteilung mit Belegerstellung',
       'Alle Export-Funktionen',
       'Erweiterte Statistiken',
       'Priority Support',

@@ -95,6 +95,7 @@ export default function UpgradePrompt({
                 </div>
                 <ul className="text-sm text-gray-600 space-y-1">
                   <li>• Unbegrenzte Reisen</li>
+                  <li>• Erweiterte Kostenteilung</li>
                   <li>• Alle Export-Funktionen</li>
                   <li>• Priority Support</li>
                   <li>• Beta-Features</li>

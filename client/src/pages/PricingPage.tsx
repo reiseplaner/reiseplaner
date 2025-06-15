@@ -101,37 +101,55 @@ export default function PricingPage() {
   const getPlanIcon = (planId: string) => {
     switch (planId) {
       case 'free':
-        return <Plane className="h-8 w-8 text-blue-500" />;
+        return (
+          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Plane className="h-7 w-7 text-white" />
+          </div>
+        );
       case 'pro':
-        return <Sparkles className="h-8 w-8 text-purple-500" />;
+        return (
+          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Sparkles className="h-7 w-7 text-white" />
+          </div>
+        );
       case 'veteran':
-        return <Crown className="h-8 w-8 text-yellow-500" />;
+        return (
+          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Crown className="h-7 w-7 text-white" />
+          </div>
+        );
       default:
-        return <Plane className="h-8 w-8" />;
+        return (
+          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Plane className="h-7 w-7 text-white" />
+          </div>
+        );
     }
   };
 
   const getPlanColor = (planId: string) => {
     switch (planId) {
       case 'free':
-        return 'border-blue-200';
+        return 'border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white';
       case 'pro':
-        return 'border-purple-200 bg-purple-50/50';
+        return 'border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white ring-2 ring-slate-900';
       case 'veteran':
-        return 'border-yellow-200 bg-yellow-50/50';
+        return 'border-0 shadow-lg hover:shadow-xl transition-all duration-300 bg-white';
       default:
-        return 'border-gray-200';
+        return 'border-0 shadow-lg bg-white';
     }
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen bg-white">
         <Navigation />
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <div className="text-center">
-            <Plane className="h-12 w-12 animate-pulse mx-auto mb-4 text-blue-500" />
-            <p className="text-lg text-gray-600">Lade Pricing-Optionen...</p>
+            <div className="bg-slate-900 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <Plane className="h-8 w-8 text-white" />
+            </div>
+            <p className="text-lg text-slate-600">Lade Pricing-Optionen...</p>
           </div>
         </div>
       </div>
@@ -139,52 +157,68 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-white">
       <Navigation />
-      <div className="container mx-auto px-4 py-12">
-        {/* Back Button */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="mb-8"
-        >
-          <Button
-            variant="ghost"
-            onClick={() => window.location.href = '/'}
-            className="text-gray-600 hover:text-gray-900"
+      
+      {/* Hero Section */}
+      <section className="pt-20 pb-16 bg-slate-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Back Button */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="mb-8"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Zurück zum Dashboard
-          </Button>
-        </motion.div>
+            <Button
+              variant="ghost"
+              onClick={() => window.location.href = '/'}
+              className="text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-full px-6"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Zurück zum Dashboard
+            </Button>
+          </motion.div>
 
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Wählen Sie Ihren Plan
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Planen Sie mehr Reisen und nutzen Sie erweiterte Features für Ihre Traumurlaube
-          </p>
-          
-          {currentSubscription && (
-            <div className="mt-6">
-              <Badge variant="outline" className="text-lg px-4 py-2">
-                Aktueller Plan: <span className="font-bold ml-1">{plans[currentSubscription.status]?.name}</span>
-              </Badge>
-              <p className="text-sm text-gray-500 mt-2">
-                {currentSubscription.tripsUsed} von {currentSubscription.tripsLimit === Infinity ? '∞' : currentSubscription.tripsLimit} Reisen verwendet
-              </p>
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mb-16"
+          >
+            <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
+              <Sparkles className="h-4 w-4" />
+              Premium Reiseplanung für Profis
             </div>
-          )}
-        </motion.div>
+            <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">
+              Wählen Sie
+              <span className="bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent block">
+                Ihren Plan
+              </span>
+            </h1>
+            <p className="text-xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
+              Planen Sie mehr Reisen und nutzen Sie erweiterte Features für Ihre Traumurlaube. 
+              Professionelle Tools für jeden Reisetyp.
+            </p>
+            
+            {currentSubscription && (
+              <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 max-w-md mx-auto">
+                <div className="flex items-center justify-center gap-3 mb-4">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  <span className="text-slate-900 font-semibold">Aktueller Plan: {plans[currentSubscription.status]?.name}</span>
+                </div>
+                <p className="text-sm text-slate-600">
+                  {currentSubscription.tripsUsed} von {currentSubscription.tripsLimit === Infinity ? '∞' : currentSubscription.tripsLimit} Reisen verwendet
+                </p>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      </section>
 
-        {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+      {/* Pricing Cards Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-3 gap-8">
           {Object.values(plans).map((plan, index) => (
             <motion.div
               key={plan.id}
@@ -192,11 +226,11 @@ export default function PricingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className={`relative h-full ${getPlanColor(plan.id)} ${
-                currentSubscription?.status === plan.id ? 'ring-2 ring-blue-500' : ''
+              <Card className={`relative h-full flex flex-col ${getPlanColor(plan.id)} ${
+                currentSubscription?.status === plan.id ? 'ring-2 ring-green-500' : ''
               }`}>
                 {plan.id === 'pro' && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-purple-500">
+                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white">
                     Beliebt
                   </Badge>
                 )}
@@ -205,43 +239,47 @@ export default function PricingPage() {
                   <div className="mx-auto mb-4">
                     {getPlanIcon(plan.id)}
                   </div>
-                  <CardTitle className="text-2xl font-bold">{plan.name}</CardTitle>
-                  <CardDescription className="text-lg">
+                  <CardTitle className="text-2xl font-bold text-slate-900">{plan.name}</CardTitle>
+                  <CardDescription className="text-lg text-slate-600">
                     {plan.id === 'free' && 'Perfekt für Gelegenheitsreisende'}
                     {plan.id === 'pro' && 'Ideal für regelmäßige Reisen'}
                     {plan.id === 'veteran' && 'Für echte Reise-Profis'}
                   </CardDescription>
                   
-                  <div className="mt-4">
-                    <div className="text-4xl font-bold">
+                  <div className="mt-6">
+                    <div className="text-4xl font-bold text-slate-900">
                       €{plan.price.toFixed(2)}
                     </div>
-                    <div className="text-gray-500">
+                    <div className="text-slate-500">
                       {plan.price === 0 ? 'Kostenlos' : 'pro Monat'}
                     </div>
                   </div>
                 </CardHeader>
 
-                <CardContent className="space-y-4">
+                <CardContent className="flex flex-col flex-grow text-center">
                   {/* Features */}
-                  <div className="space-y-3">
+                  <div className="space-y-4 flex-grow">
                     {plan.features.map((feature, featureIndex) => (
-                      <div key={featureIndex} className="flex items-center gap-3">
+                      <div key={featureIndex} className="flex items-center gap-3 text-left">
                         <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                        <span className="text-sm">{feature}</span>
+                        <span className="text-slate-600 leading-relaxed">{feature}</span>
                       </div>
                     ))}
                   </div>
 
                   {/* Action Button */}
-                  <div className="pt-6">
+                  <div className="mt-8">
                     {currentSubscription?.status === plan.id ? (
-                      <Button className="w-full" disabled>
-                        Aktueller Plan
+                      <Button className="w-full bg-green-500 hover:bg-green-600 text-white rounded-full py-3 font-semibold" disabled>
+                        ✓ Aktueller Plan
                       </Button>
                     ) : (
                       <Button
-                        className="w-full"
+                        className={`w-full rounded-full py-3 font-semibold transition-all duration-200 ${
+                          plan.id === 'free' 
+                            ? 'border-2 border-slate-200 text-slate-700 hover:bg-slate-50' 
+                            : 'bg-slate-900 text-white hover:bg-slate-800'
+                        }`}
                         variant={plan.id === 'free' ? 'outline' : 'default'}
                         onClick={() => handleUpgrade(plan.id)}
                         disabled={upgrading === plan.id}
@@ -258,36 +296,46 @@ export default function PricingPage() {
               </Card>
             </motion.div>
           ))}
-        </div>
-
-        {/* FAQ Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="mt-16 text-center"
-        >
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">Häufig gestellte Fragen</h2>
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
-            <div>
-              <h3 className="font-semibold mb-2">Kann ich jederzeit kündigen?</h3>
-              <p className="text-gray-600">Ja, alle Pläne sind monatlich kündbar. Keine langfristigen Verpflichtungen.</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Welche Zahlungsmethoden werden akzeptiert?</h3>
-              <p className="text-gray-600">Wir akzeptieren alle gängigen Kreditkarten und SEPA-Lastschrift über Stripe.</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Was passiert mit meinen Daten bei der Kündigung?</h3>
-              <p className="text-gray-600">Ihre Reisedaten bleiben erhalten, aber Premium-Features werden deaktiviert.</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Gibt es einen kostenlosen Test?</h3>
-              <p className="text-gray-600">Der Standard-Plan ist dauerhaft kostenlos mit 1 Reise zum Testen.</p>
-            </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-20 bg-slate-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="text-center"
+          >
+            <h2 className="text-4xl font-bold text-slate-900 mb-4">
+              Häufig gestellte Fragen
+            </h2>
+            <p className="text-xl text-slate-600 mb-16 max-w-2xl mx-auto">
+              Alles was Sie über unsere Pläne wissen müssen
+            </p>
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
+              <Card className="border-0 shadow-lg bg-white p-6">
+                <h3 className="font-semibold text-slate-900 mb-3">Kann ich jederzeit kündigen?</h3>
+                <p className="text-slate-600">Ja, alle Pläne sind monatlich kündbar. Keine langfristigen Verpflichtungen.</p>
+              </Card>
+              <Card className="border-0 shadow-lg bg-white p-6">
+                <h3 className="font-semibold text-slate-900 mb-3">Welche Zahlungsmethoden werden akzeptiert?</h3>
+                <p className="text-slate-600">Wir akzeptieren alle gängigen Kreditkarten und SEPA-Lastschrift über Stripe.</p>
+              </Card>
+              <Card className="border-0 shadow-lg bg-white p-6">
+                <h3 className="font-semibold text-slate-900 mb-3">Was passiert mit meinen Daten bei der Kündigung?</h3>
+                <p className="text-slate-600">Ihre Reisedaten bleiben erhalten, aber Premium-Features werden deaktiviert.</p>
+              </Card>
+              <Card className="border-0 shadow-lg bg-white p-6">
+                <h3 className="font-semibold text-slate-900 mb-3">Gibt es einen kostenlosen Test?</h3>
+                <p className="text-slate-600">Der Standard-Plan ist dauerhaft kostenlos mit 1 Reise zum Testen.</p>
+              </Card>
+            </div>
+          </motion.div>
+        </div>
+      </section>
     </div>
   );
 } 
