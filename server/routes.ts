@@ -8,8 +8,9 @@ import {
   insertBudgetItemSchema,
   insertActivitySchema,
   insertRestaurantSchema,
+  insertCostSharingReceiptSchema,
   users,
-} from "@shared/schema";
+} from "../shared/schema";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 import { db } from "./db";
@@ -911,6 +912,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting restaurant:", error);
       res.status(500).json({ message: "Failed to delete restaurant" });
+    }
+  });
+
+  // Cost sharing receipt routes
+  app.get('/api/trips/:tripId/cost-sharing-receipts', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const tripId = parseInt(req.params.tripId);
+      
+      // Verify trip belongs to user
+      const trip = await storage.getTripById(tripId, userId);
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      const receipts = await storage.getCostSharingReceiptsByTripId(tripId);
+      res.json(receipts);
+    } catch (error) {
+      console.error("Error fetching cost sharing receipts:", error);
+      res.status(500).json({ message: "Failed to fetch cost sharing receipts" });
+    }
+  });
+
+  app.post('/api/trips/:tripId/cost-sharing-receipts', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const tripId = parseInt(req.params.tripId);
+      
+      // Verify trip belongs to user
+      const trip = await storage.getTripById(tripId, userId);
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      const receiptData = insertCostSharingReceiptSchema.parse({ 
+        ...req.body, 
+        tripId 
+      });
+      
+      const receipt = await storage.createCostSharingReceipt(receiptData);
+      res.json(receipt);
+    } catch (error) {
+      console.error("Error creating cost sharing receipt:", error);
+      res.status(400).json({ message: "Invalid receipt data" });
+    }
+  });
+
+  app.put('/api/trips/:tripId/cost-sharing-receipts/:receiptId', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const tripId = parseInt(req.params.tripId);
+      const receiptId = parseInt(req.params.receiptId);
+      
+      // Verify trip belongs to user
+      const trip = await storage.getTripById(tripId, userId);
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      const receiptData = insertCostSharingReceiptSchema.partial().parse(req.body);
+      const receipt = await storage.updateCostSharingReceipt(receiptId, receiptData, tripId);
+      
+      if (!receipt) {
+        return res.status(404).json({ message: "Receipt not found" });
+      }
+      
+      res.json(receipt);
+    } catch (error) {
+      console.error("Error updating cost sharing receipt:", error);
+      res.status(400).json({ message: "Invalid receipt data" });
+    }
+  });
+
+  app.delete('/api/trips/:tripId/cost-sharing-receipts/:receiptId', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const tripId = parseInt(req.params.tripId);
+      const receiptId = parseInt(req.params.receiptId);
+      
+      // Verify trip belongs to user
+      const trip = await storage.getTripById(tripId, userId);
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      const success = await storage.deleteCostSharingReceipt(receiptId, tripId);
+      
+      if (!success) {
+        return res.status(404).json({ message: "Receipt not found" });
+      }
+      
+      res.json({ message: "Receipt deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting cost sharing receipt:", error);
+      res.status(500).json({ message: "Failed to delete receipt" });
     }
   });
 

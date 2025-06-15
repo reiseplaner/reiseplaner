@@ -12,6 +12,7 @@ import { Heart, MapPin, Calendar, Users, Plane, Mountain, Building } from "lucid
 import type { Trip, PublicTripWithUser } from "@shared/schema";
 import CopyTripDialog, { type CopyOptions } from "@/components/CopyTripDialog";
 import UpgradePrompt from "@/components/UpgradePrompt";
+import Footer from "@/components/Footer";
 
 // Extended trip type with upvote count
 type TripWithUpvotes = PublicTripWithUser & { 
@@ -191,11 +192,11 @@ export default function Community() {
       }
       
       // Also check for the specific German error message
-      if (error.message && error.message.includes('Sie haben das Limit von 2 Reisen für den FREE Plan erreicht')) {
+      if (error.message && error.message.includes('Sie haben das Limit von 1 Reise für den FREE Plan erreicht')) {
         setLimitInfo({
           currentPlan: 'free',
-          tripsUsed: 2,
-          tripsLimit: 2
+          tripsUsed: 1,
+          tripsLimit: 1
         });
         setUpgradePromptOpen(true);
         setCopyDialogOpen(false);
@@ -843,6 +844,8 @@ export default function Community() {
           tripsLimit={limitInfo.tripsLimit}
         />
       )}
+
+      <Footer />
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { PublicTripWithDetails } from "@shared/schema";
+import Footer from "@/components/Footer";
 
 export default function PublicTripDetail() {
   const { slug } = useParams();
@@ -474,6 +475,7 @@ export default function PublicTripDetail() {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   );
 } 

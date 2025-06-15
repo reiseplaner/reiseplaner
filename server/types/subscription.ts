@@ -22,7 +22,7 @@ export interface SubscriptionPlan {
 
 export const SUBSCRIPTION_LIMITS = {
   free: {
-    tripsLimit: 2,
+    tripsLimit: 1,
     canExport: false,
   },
   pro: {
@@ -41,10 +41,10 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
     name: 'Standard',
     price: 0,
     currency: 'EUR',
-    tripsLimit: 2,
+    tripsLimit: 1,
     canExport: false,
     features: [
-      'Bis zu 2 Reisen',
+      'Bis zu 1 Reise',
       'Basis Budgetplanung',
       'Restaurant & Aktivitäten Planer',
     ],

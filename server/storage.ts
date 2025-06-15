@@ -4,6 +4,7 @@ import {
   budgetItems,
   activities,
   restaurants,
+  costSharingReceipts,
   tripUpvotes,
   tripComments,
   type User,
@@ -19,11 +20,13 @@ import {
   type InsertActivity,
   type Restaurant,
   type InsertRestaurant,
+  type CostSharingReceipt,
+  type InsertCostSharingReceipt,
   type TripUpvote,
   type InsertTripUpvote,
   type TripComment,
   type InsertTripComment,
-} from "@shared/schema";
+} from "../shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sql } from "drizzle-orm";
 import { SUBSCRIPTION_LIMITS, type SubscriptionStatus, type SubscriptionInfo } from './types/subscription';
@@ -83,6 +86,12 @@ export interface IStorage {
   createRestaurant(restaurant: InsertRestaurant): Promise<Restaurant>;
   updateRestaurant(id: number, restaurant: Partial<InsertRestaurant>): Promise<Restaurant | undefined>;
   deleteRestaurant(id: number): Promise<boolean>;
+  
+  // Cost sharing receipt operations
+  getCostSharingReceiptsByTripId(tripId: number): Promise<CostSharingReceipt[]>;
+  createCostSharingReceipt(receipt: InsertCostSharingReceipt): Promise<CostSharingReceipt>;
+  updateCostSharingReceipt(id: number, receipt: Partial<InsertCostSharingReceipt>, tripId: number): Promise<CostSharingReceipt | undefined>;
+  deleteCostSharingReceipt(id: number, tripId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -215,10 +224,11 @@ export class DatabaseStorage implements IStorage {
       .where(and(...whereConditions));
     if (!trip) return undefined;
 
-    const [tripBudgetItems, tripActivities, tripRestaurants] = await Promise.all([
+    const [tripBudgetItems, tripActivities, tripRestaurants, tripCostSharingReceipts] = await Promise.all([
       this.getBudgetItemsByTripId(id),
       this.getActivitiesByTripId(id),
       this.getRestaurantsByTripId(id),
+      this.getCostSharingReceiptsByTripId(id),
     ]);
 
     return {
@@ -226,6 +236,7 @@ export class DatabaseStorage implements IStorage {
       budgetItems: tripBudgetItems,
       activities: tripActivities,
       restaurants: tripRestaurants,
+      costSharingReceipts: tripCostSharingReceipts,
     };
   }
 
@@ -640,6 +651,35 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updatedUser;
+  }
+
+  // Cost sharing receipt operations
+  async getCostSharingReceiptsByTripId(tripId: number): Promise<CostSharingReceipt[]> {
+    return await db
+      .select()
+      .from(costSharingReceipts)
+      .where(eq(costSharingReceipts.tripId, tripId));
+  }
+
+  async createCostSharingReceipt(receipt: InsertCostSharingReceipt): Promise<CostSharingReceipt> {
+    const [newReceipt] = await db.insert(costSharingReceipts).values(receipt).returning();
+    return newReceipt;
+  }
+
+  async updateCostSharingReceipt(id: number, receipt: Partial<InsertCostSharingReceipt>, tripId: number): Promise<CostSharingReceipt | undefined> {
+    const [updatedReceipt] = await db
+      .update(costSharingReceipts)
+      .set(receipt)
+      .where(and(eq(costSharingReceipts.id, id), eq(costSharingReceipts.tripId, tripId)))
+      .returning();
+    return updatedReceipt;
+  }
+
+  async deleteCostSharingReceipt(id: number, tripId: number): Promise<boolean> {
+    const result = await db
+      .delete(costSharingReceipts)
+      .where(and(eq(costSharingReceipts.id, id), eq(costSharingReceipts.tripId, tripId)));
+    return (result.rowCount ?? 0) > 0;
   }
 }
 

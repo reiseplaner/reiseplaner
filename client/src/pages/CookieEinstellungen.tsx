@@ -5,6 +5,7 @@ import { ArrowLeft, Shield, BarChart3, Target, Cookie } from "lucide-react";
 import { useLocation } from "wouter";
 import { useCookies } from "@/contexts/CookieContext";
 import { useState } from "react";
+import Footer from "@/components/Footer";
 
 export default function CookieEinstellungen() {
   const [, navigate] = useLocation();
@@ -149,6 +150,7 @@ export default function CookieEinstellungen() {
             </div>
           </CardContent>
         </Card>
+        <Footer />
       </div>
     </div>
   );

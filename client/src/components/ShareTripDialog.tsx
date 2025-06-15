@@ -9,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -22,6 +21,8 @@ interface ShareTripDialogProps {
   isAlreadyShared?: boolean;
   existingDescription?: string;
   publicSlug?: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export default function ShareTripDialog({ 
@@ -29,9 +30,10 @@ export default function ShareTripDialog({
   tripName, 
   isAlreadyShared, 
   existingDescription,
-  publicSlug 
+  publicSlug,
+  open,
+  onOpenChange
 }: ShareTripDialogProps) {
-  const [open, setOpen] = useState(false);
   const [description, setDescription] = useState("");
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -54,10 +56,8 @@ export default function ShareTripDialog({
       // Update the trip cache to reflect the shared status
       queryClient.invalidateQueries({ queryKey: ["/api/trips", tripId.toString()] });
       queryClient.invalidateQueries({ queryKey: ["/api/public/trips"] });
-      
-      setOpen(false);
+      onOpenChange(false);
       setDescription("");
-      
       toast({
         title: "Reise geteilt!",
         description: "Deine Reise ist jetzt in der Community sichtbar und kann von anderen Reisenden entdeckt werden.",
@@ -81,7 +81,6 @@ export default function ShareTripDialog({
       });
       return;
     }
-
     shareTripMutation.mutate(description);
   };
 
@@ -109,13 +108,7 @@ export default function ShareTripDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline">
-          <Share className="h-4 w-4 mr-2" />
-          Mit Community teilen
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
           <DialogTitle>Reise mit der Community teilen</DialogTitle>
@@ -142,7 +135,7 @@ export default function ShareTripDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Abbrechen
           </Button>
           <Button 

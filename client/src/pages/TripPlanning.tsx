@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { ArrowLeft, Save, Share, Download } from "lucide-react";
+import { ArrowLeft, Save, Share, Download, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,14 @@ import { apiRequest } from "@/lib/queryClient";
 import { exportTripToPDF, exportTripToCSV, exportTripToExcel, exportTripToGoogleSheets } from "@/lib/exportUtils";
 import { insertTripSchema, type TripWithDetails } from "@shared/schema";
 import { z } from "zod";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem
+} from "@/components/ui/dropdown-menu";
+import Footer from "@/components/Footer";
+import CostSharingTab from "@/components/CostSharingTab";
 
 const generalDataSchema = z.object({
   name: z.string().min(1, "Reisename ist erforderlich"),
@@ -48,6 +56,7 @@ export default function TripPlanning() {
     return savedTab || "general";
   });
   const isInitialLoadRef = useRef(true);
+  const [showShareDialog, setShowShareDialog] = useState(false);
 
   const { data: trip, isLoading } = useQuery<TripWithDetails>({
     queryKey: ["/api/trips", id],
@@ -302,29 +311,36 @@ export default function TripPlanning() {
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline" onClick={handleExportPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              PDF
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Download className="h-4 w-4 mr-2" />
+                  Exportieren
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleExportPDF}>
+                  <Download className="h-4 w-4 mr-2" /> PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportCSV}>
+                  <Download className="h-4 w-4 mr-2" /> CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel}>
+                  <Download className="h-4 w-4 mr-2" /> Excel
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportGoogleSheets}>
+                  <Download className="h-4 w-4 mr-2" /> Google Sheets
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              className="bg-emerald-600 text-white hover:bg-emerald-700 relative flex items-center"
+              onClick={() => setShowShareDialog(true)}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Mit Community teilen
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-white text-emerald-700 text-xs font-bold absolute -top-2 -right-4 border border-emerald-200 shadow-sm">Tipp</span>
             </Button>
-            <Button variant="outline" onClick={handleExportCSV}>
-              <Download className="h-4 w-4 mr-2" />
-              CSV
-            </Button>
-            <Button variant="outline" onClick={handleExportExcel}>
-              <Download className="h-4 w-4 mr-2" />
-              Excel
-            </Button>
-            <Button variant="outline" onClick={handleExportGoogleSheets}>
-              <Download className="h-4 w-4 mr-2" />
-              Google Sheets
-            </Button>
-            <ShareTripDialog 
-              tripId={actualTrip.id} 
-              tripName={actualTrip.name}
-              isAlreadyShared={actualTrip.isPublic}
-              existingDescription={actualTrip.description || undefined}
-              publicSlug={actualTrip.publicSlug || undefined}
-            />
             <Button
               onClick={form.handleSubmit(onSubmit)}
               disabled={updateTripMutation.isPending}
@@ -338,12 +354,13 @@ export default function TripPlanning() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="general">Allgemeine Daten</TabsTrigger>
             <TabsTrigger value="budget">Budget</TabsTrigger>
             <TabsTrigger value="activities">Aktivitäten</TabsTrigger>
             <TabsTrigger value="restaurants">Restaurants</TabsTrigger>
             <TabsTrigger value="calendar">Kalender</TabsTrigger>
+            <TabsTrigger value="costsharing">Kostenteilung</TabsTrigger>
           </TabsList>
 
           {/* General Data Tab */}
@@ -516,8 +533,16 @@ export default function TripPlanning() {
               </Card>
             )}
           </TabsContent>
+
+          {/* Cost Sharing Tab */}
+          <TabsContent value="costsharing">
+            <CostSharingTab trip={actualTrip} />
+          </TabsContent>
         </Tabs>
       </div>
+      <Footer />
+      {/* Share Dialog */}
+      <ShareTripDialog open={showShareDialog} onOpenChange={setShowShareDialog} trip={actualTrip} />
     </div>
   );
 }

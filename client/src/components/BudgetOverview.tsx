@@ -98,6 +98,16 @@ const subcategoryOptions = {
   ]
 };
 
+// Mapping für die exakten Tailwind-Klassen für die Farbkreise
+const categoryDotClasses = {
+  "Transport": "bg-blue-500",
+  "Hotel": "bg-purple-500",
+  "Verpflegung": "bg-green-500",
+  "Aktivitäten": "bg-yellow-500",
+  "Versicherung": "bg-red-500",
+  "Sonstiges": "bg-slate-500"
+} as const;
+
 export default function BudgetOverview({ trip }: BudgetOverviewProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -477,6 +487,12 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
     return categoryItems.reduce((sum, item) => sum + safeParseFloat(item.totalPrice), 0);
   };
 
+  // Summen der einzelnen Kategorien berechnen
+  const categorySums = mainCategories.reduce((acc, category) => {
+    acc[category] = getCategoryTotal(groupedBudgetItems[category] || []);
+    return acc;
+  }, {} as Record<string, number>);
+
   // Flight search mutation
   const searchFlightsMutation = useMutation({
     mutationFn: async (tripId: number) => {
@@ -569,11 +585,40 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
               <div className="text-sm text-slate-500">{summary.days} Reisetage</div>
             </div>
           </div>
-          <div className="w-full bg-slate-200 rounded-full h-3 mt-6">
-            <div 
-              className="bg-gradient-to-r from-green-600 to-green-500 h-3 rounded-full transition-all duration-300"
-              style={{ width: `${Math.min(summary.percentage, 100)}%` }}
-            ></div>
+          <div className="w-full bg-slate-200 rounded-full h-3 mt-6 flex overflow-hidden">
+            {mainCategories.map((category) => {
+              const value = categorySums[category];
+              const percent = summary.totalBudget > 0 ? (value / summary.totalBudget) * 100 : 0;
+              if (percent === 0) return null;
+              return (
+                <div
+                  key={category}
+                  className={`h-3 ${categoryDotClasses[category as keyof typeof categoryDotClasses]}`}
+                  style={{ width: `${percent}%` }}
+                  title={category}
+                ></div>
+              );
+            })}
+            {summary.remaining > 0 && (
+              <div
+                className="h-3 bg-slate-100"
+                style={{ width: `${(summary.remaining / summary.totalBudget) * 100}%` }}
+                title="Nicht verplant"
+              ></div>
+            )}
+          </div>
+          {/* Legende unter dem Balken */}
+          <div className="flex flex-wrap gap-4 mt-2 text-xs items-center">
+            {mainCategories.map((category) => (
+              <div key={category} className="flex items-center gap-1">
+                <span className={`inline-block w-3 h-3 rounded-full ${categoryDotClasses[category as keyof typeof categoryDotClasses]}`}></span>
+                <span>{category}</span>
+              </div>
+            ))}
+            <div className="flex items-center gap-1">
+              <span className="inline-block w-3 h-3 rounded-full bg-slate-100 border border-slate-300"></span>
+              <span>Nicht verplant</span>
+            </div>
           </div>
           {summary.percentage > 100 && (
             <p className="text-sm text-red-600 mt-2 font-medium">
@@ -594,7 +639,10 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
             <Card key={category}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{category}</CardTitle>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-3 h-3 rounded-full ${categoryDotClasses[category as keyof typeof categoryDotClasses]}`}></div>
+                    <CardTitle className="text-lg">{category}</CardTitle>
+                  </div>
                   <div className="flex items-center gap-4">
                     <span className="text-sm font-medium text-slate-600">
                       Gesamt: €{categoryTotal.toLocaleString()}

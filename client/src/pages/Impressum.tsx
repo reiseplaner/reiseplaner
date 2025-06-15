@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
+import Footer from "@/components/Footer";
 
 export default function Impressum() {
   const [, navigate] = useLocation();
@@ -92,6 +93,7 @@ export default function Impressum() {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   );
 } 

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
+import Footer from "@/components/Footer";
 
 export default function Datenschutz() {
   const [, navigate] = useLocation();
@@ -83,7 +84,7 @@ export default function Datenschutz() {
               <h3 className="text-lg font-semibold mb-2">4. Datenerfassung auf dieser Website</h3>
               <h4 className="font-semibold mb-2">Cookies</h4>
               <p className="mb-4">
-                Unsere Internetseiten verwenden so genannte „Cookies". Cookies sind kleine 
+                Unsere Internetseiten verwenden so genannte "Cookies". Cookies sind kleine 
                 Datenpakete und richten auf Ihrem Endgerät keinen Schaden an. Sie werden entweder 
                 vorübergehend für die Dauer einer Sitzung (Session-Cookies) oder dauerhaft 
                 (dauerhafte Cookies) auf Ihrem Endgerät gespeichert.
@@ -142,7 +143,7 @@ export default function Datenschutz() {
               <h4 className="font-semibold mb-2">Google Analytics (bei Einwilligung)</h4>
               <p>
                 Bei Ihrer Einwilligung verwenden wir Google Analytics, einen Webanalysedienst der Google Ireland 
-                Limited („Google"). Google Analytics verwendet Cookies, die eine Analyse der Benutzung der 
+                Limited ("Google"). Google Analytics verwendet Cookies, die eine Analyse der Benutzung der 
                 Website durch Sie ermöglichen. Die durch das Cookie erzeugten Informationen über Ihre Benutzung 
                 dieser Website werden in der Regel an einen Server von Google in den USA übertragen und dort gespeichert.
               </p>
@@ -189,6 +190,7 @@ export default function Datenschutz() {
           </CardContent>
         </Card>
       </div>
+      <Footer />
     </div>
   );
 } 

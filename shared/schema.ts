@@ -113,6 +113,20 @@ export const tripComments = pgTable("trip_comments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Cost sharing receipts table
+export const costSharingReceipts = pgTable("cost_sharing_receipts", {
+  id: serial("id").primaryKey(),
+  tripId: integer("trip_id").notNull().references(() => trips.id, { onDelete: "cascade" }),
+  itemType: varchar("item_type").notNull(), // 'budget', 'activity', 'restaurant'
+  itemName: varchar("item_name").notNull(),
+  total: numeric("total", { precision: 10, scale: 2 }).notNull(),
+  payer: varchar("payer").notNull(),
+  persons: jsonb("persons").notNull(), // Array of PersonShare objects
+  debts: jsonb("debts").notNull(), // Array of Debt objects
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   trips: many(trips),
@@ -128,6 +142,7 @@ export const tripsRelations = relations(trips, ({ one, many }) => ({
   budgetItems: many(budgetItems),
   activities: many(activities),
   restaurants: many(restaurants),
+  costSharingReceipts: many(costSharingReceipts),
   upvotes: many(tripUpvotes),
   comments: many(tripComments),
 }));
@@ -175,6 +190,13 @@ export const tripCommentsRelations = relations(tripComments, ({ one }) => ({
   }),
 }));
 
+export const costSharingReceiptsRelations = relations(costSharingReceipts, ({ one }) => ({
+  trip: one(trips, {
+    fields: [costSharingReceipts.tripId],
+    references: [trips.id],
+  }),
+}));
+
 // Insert schemas
 export const insertTripSchema = createInsertSchema(trips).omit({
   id: true,
@@ -208,6 +230,12 @@ export const insertTripCommentSchema = createInsertSchema(tripComments).omit({
   updatedAt: true,
 });
 
+export const insertCostSharingReceiptSchema = createInsertSchema(costSharingReceipts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
@@ -223,12 +251,15 @@ export type InsertTripUpvote = z.infer<typeof insertTripUpvoteSchema>;
 export type TripUpvote = typeof tripUpvotes.$inferSelect;
 export type InsertTripComment = z.infer<typeof insertTripCommentSchema>;
 export type TripComment = typeof tripComments.$inferSelect;
+export type InsertCostSharingReceipt = z.infer<typeof insertCostSharingReceiptSchema>;
+export type CostSharingReceipt = typeof costSharingReceipts.$inferSelect;
 
 // Trip with relations type
 export type TripWithDetails = Trip & {
   budgetItems: BudgetItem[];
   activities: Activity[];
   restaurants: Restaurant[];
+  costSharingReceipts?: CostSharingReceipt[];
 };
 
 // Public trip with community features

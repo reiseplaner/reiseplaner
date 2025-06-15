@@ -283,7 +283,7 @@ export default function PricingPage() {
             </div>
             <div>
               <h3 className="font-semibold mb-2">Gibt es einen kostenlosen Test?</h3>
-              <p className="text-gray-600">Der Standard-Plan ist dauerhaft kostenlos mit 2 Reisen zum Testen.</p>
+              <p className="text-gray-600">Der Standard-Plan ist dauerhaft kostenlos mit 1 Reise zum Testen.</p>
             </div>
           </div>
         </motion.div>
