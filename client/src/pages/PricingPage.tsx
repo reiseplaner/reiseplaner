@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Sparkles, Crown, Plane, ArrowLeft } from 'lucide-react';
+import { Check, Sparkles, Crown, Plane, ArrowLeft, Star } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -11,15 +11,19 @@ import Navigation from '../components/Navigation';
 interface SubscriptionPlan {
   id: 'free' | 'pro' | 'veteran';
   name: string;
-  price: number;
+  monthlyPrice?: number;
+  yearlyPrice?: number;
+  price?: number; // Fallback für alte Struktur
   currency: string;
   tripsLimit: number;
   canExport: boolean;
   features: string[];
+  yearlyDiscount?: string;
 }
 
 interface SubscriptionInfo {
   status: 'free' | 'pro' | 'veteran';
+  billingInterval?: 'monthly' | 'yearly';
   tripsUsed: number;
   tripsLimit: number;
   canExport: boolean;
@@ -30,6 +34,7 @@ export default function PricingPage() {
   const [currentSubscription, setCurrentSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -57,13 +62,14 @@ export default function PricingPage() {
     }
   };
 
-  const handleUpgrade = async (planId: string) => {
+  const handleUpgrade = async (planId: string, interval: 'monthly' | 'yearly') => {
     if (planId === 'free') return;
     
     setUpgrading(planId);
     try {
       const response = await apiRequest('POST', '/api/subscription/create-checkout', {
-        planId
+        planId,
+        billingInterval: interval
       });
       const responseData = await response.json();
       
@@ -78,6 +84,7 @@ export default function PricingPage() {
           setCurrentSubscription(prev => prev ? {
             ...prev,
             status: planId as any,
+            billingInterval: interval,
             tripsLimit: plans[planId]?.tripsLimit || 10,
             canExport: plans[planId]?.canExport || true
           } : null);
@@ -138,6 +145,23 @@ export default function PricingPage() {
       default:
         return 'border-0 shadow-lg bg-white';
     }
+  };
+
+  const getPrice = (plan: SubscriptionPlan) => {
+    // Fallback für alte Struktur mit 'price' Feld
+    if (plan.yearlyPrice !== undefined && plan.monthlyPrice !== undefined) {
+      return billingInterval === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
+    }
+    // Fallback für alte Struktur
+    return (plan as any).price || 0;
+  };
+
+  const getYearlySavings = (plan: SubscriptionPlan) => {
+    // Nur berechnen wenn beide Preise verfügbar sind
+    if (plan.monthlyPrice === undefined || plan.yearlyPrice === undefined) return 0;
+    if (plan.monthlyPrice === 0) return 0;
+    const monthlyYearly = plan.monthlyPrice * 12;
+    return monthlyYearly - plan.yearlyPrice;
   };
 
   if (loading) {
@@ -204,7 +228,10 @@ export default function PricingPage() {
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 max-w-md mx-auto">
                 <div className="flex items-center justify-center gap-3 mb-4">
                   <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-slate-900 font-semibold">Aktueller Plan: {plans[currentSubscription.status]?.name}</span>
+                  <span className="text-slate-900 font-semibold">
+                    Aktueller Plan: {plans[currentSubscription.status]?.name}
+                    {currentSubscription.billingInterval && ` (${currentSubscription.billingInterval === 'yearly' ? 'Jährlich' : 'Monatlich'})`}
+                  </span>
                 </div>
                 <p className="text-sm text-slate-600">
                   {currentSubscription.tripsUsed} von {currentSubscription.tripsLimit === Infinity ? '∞' : currentSubscription.tripsLimit} Reisen verwendet
@@ -218,6 +245,34 @@ export default function PricingPage() {
       {/* Pricing Cards Section */}
       <section className="py-20 bg-white">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Billing Toggle */}
+          <div className="flex items-center justify-center gap-4 mb-12">
+            <span className={`text-lg font-medium ${billingInterval === 'monthly' ? 'text-slate-900' : 'text-slate-500'}`}>
+              Monatlich
+            </span>
+            <button
+              onClick={() => setBillingInterval(billingInterval === 'monthly' ? 'yearly' : 'monthly')}
+              className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors ${
+                billingInterval === 'yearly' ? 'bg-slate-900' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                  billingInterval === 'yearly' ? 'translate-x-9' : 'translate-x-1'
+                }`}
+              />
+            </button>
+            <span className={`text-lg font-medium ${billingInterval === 'yearly' ? 'text-slate-900' : 'text-slate-500'}`}>
+              Jährlich
+            </span>
+            {billingInterval === 'yearly' && (
+              <Badge className="bg-green-100 text-green-800 border-green-200">
+                <Star className="h-3 w-3 mr-1" />
+                2 Monate Gratis!
+              </Badge>
+            )}
+          </div>
+
           <div className="grid md:grid-cols-3 gap-8">
           {Object.values(plans).map((plan, index) => (
             <motion.div
@@ -248,11 +303,21 @@ export default function PricingPage() {
                   
                   <div className="mt-6">
                     <div className="text-4xl font-bold text-slate-900">
-                      €{plan.price.toFixed(2)}
+                      €{getPrice(plan).toFixed(2)}
                     </div>
                     <div className="text-slate-500">
-                      {plan.price === 0 ? 'Kostenlos' : 'pro Monat'}
+                      {getPrice(plan) === 0 ? 'Kostenlos' : billingInterval === 'yearly' ? 'pro Jahr' : 'pro Monat'}
                     </div>
+                    {billingInterval === 'yearly' && getPrice(plan) > 0 && getYearlySavings(plan) > 0 && (
+                      <div className="mt-2">
+                        <div className="text-sm text-green-600 font-medium">
+                          Sparen Sie €{getYearlySavings(plan).toFixed(2)} pro Jahr!
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          {plan.yearlyDiscount}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
 
@@ -281,7 +346,7 @@ export default function PricingPage() {
                             : 'bg-slate-900 text-white hover:bg-slate-800'
                         }`}
                         variant={plan.id === 'free' ? 'outline' : 'default'}
-                        onClick={() => handleUpgrade(plan.id)}
+                        onClick={() => handleUpgrade(plan.id, billingInterval)}
                         disabled={upgrading === plan.id}
                       >
                         {upgrading === plan.id ? (
@@ -318,7 +383,11 @@ export default function PricingPage() {
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
               <Card className="border-0 shadow-lg bg-white p-6">
                 <h3 className="font-semibold text-slate-900 mb-3">Kann ich jederzeit kündigen?</h3>
-                <p className="text-slate-600">Ja, alle Pläne sind monatlich kündbar. Keine langfristigen Verpflichtungen.</p>
+                <p className="text-slate-600">Ja, alle Pläne sind jederzeit kündbar. Keine langfristigen Verpflichtungen.</p>
+              </Card>
+              <Card className="border-0 shadow-lg bg-white p-6">
+                <h3 className="font-semibold text-slate-900 mb-3">Was ist der Unterschied zwischen monatlich und jährlich?</h3>
+                <p className="text-slate-600">Bei jährlicher Zahlung erhalten Sie 2 Monate gratis und sparen bis zu €60 pro Jahr.</p>
               </Card>
               <Card className="border-0 shadow-lg bg-white p-6">
                 <h3 className="font-semibold text-slate-900 mb-3">Welche Zahlungsmethoden werden akzeptiert?</h3>
@@ -327,10 +396,6 @@ export default function PricingPage() {
               <Card className="border-0 shadow-lg bg-white p-6">
                 <h3 className="font-semibold text-slate-900 mb-3">Was passiert mit meinen Daten bei der Kündigung?</h3>
                 <p className="text-slate-600">Ihre Reisedaten bleiben erhalten, aber Premium-Features werden deaktiviert.</p>
-              </Card>
-              <Card className="border-0 shadow-lg bg-white p-6">
-                <h3 className="font-semibold text-slate-900 mb-3">Gibt es einen kostenlosen Test?</h3>
-                <p className="text-slate-600">Der Standard-Plan ist dauerhaft kostenlos mit 1 Reise zum Testen.</p>
               </Card>
             </div>
           </motion.div>

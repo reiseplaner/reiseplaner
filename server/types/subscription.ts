@@ -1,7 +1,9 @@
 export type SubscriptionStatus = 'free' | 'pro' | 'veteran';
+export type BillingInterval = 'monthly' | 'yearly';
 
 export interface SubscriptionInfo {
   status: SubscriptionStatus;
+  billingInterval?: BillingInterval;
   expiresAt?: string;
   tripsUsed: number;
   tripsLimit: number;
@@ -13,11 +15,13 @@ export interface SubscriptionInfo {
 export interface SubscriptionPlan {
   id: SubscriptionStatus;
   name: string;
-  price: number;
+  monthlyPrice: number;
+  yearlyPrice: number;
   currency: string;
   tripsLimit: number;
   canExport: boolean;
   features: string[];
+  yearlyDiscount?: string;
 }
 
 export const SUBSCRIPTION_LIMITS = {
@@ -39,7 +43,8 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
   free: {
     id: 'free',
     name: 'Standard',
-    price: 0,
+    monthlyPrice: 0,
+    yearlyPrice: 0,
     currency: 'EUR',
     tripsLimit: 1,
     canExport: false,
@@ -52,10 +57,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
   pro: {
     id: 'pro',
     name: 'Pro Plan',
-    price: 4.99,
+    monthlyPrice: 4.99,
+    yearlyPrice: 49.99,
     currency: 'EUR',
     tripsLimit: 10,
     canExport: true,
+    yearlyDiscount: '2 Monate Gratis!',
     features: [
       'Bis zu 10 Reisen',
       'Interaktiver Reise-Kalender',
@@ -67,10 +74,12 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
   veteran: {
     id: 'veteran',
     name: 'Veteran Plan',
-    price: 19.99,
+    monthlyPrice: 19.99,
+    yearlyPrice: 199.90,
     currency: 'EUR',
     tripsLimit: Infinity,
     canExport: true,
+    yearlyDiscount: '2 Monate Gratis!',
     features: [
       'Unbegrenzte Reisen',
       'Erweiterte Kostenteilung mit Belegerstellung',
@@ -83,6 +92,8 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
 };
 
 export const STRIPE_PRICE_IDS = {
-  pro: process.env.STRIPE_PRO_PRICE_ID || 'price_pro_monthly',
-  veteran: process.env.STRIPE_VETERAN_PRICE_ID || 'price_veteran_monthly',
+  pro_monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
+  pro_yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || 'price_pro_yearly',
+  veteran_monthly: process.env.STRIPE_VETERAN_MONTHLY_PRICE_ID || 'price_veteran_monthly',
+  veteran_yearly: process.env.STRIPE_VETERAN_YEARLY_PRICE_ID || 'price_veteran_yearly',
 }; 

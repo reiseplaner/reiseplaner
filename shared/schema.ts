@@ -26,6 +26,7 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
   subscriptionStatus: varchar("subscription_status").default('free'), // 'free', 'pro', 'veteran'
+  billingInterval: varchar("billing_interval").default('monthly'), // 'monthly', 'yearly'
   subscriptionExpiresAt: varchar("subscription_expires_at"), // ISO date string
   stripeCustomerId: varchar("stripe_customer_id"),
   stripeSubscriptionId: varchar("stripe_subscription_id"),

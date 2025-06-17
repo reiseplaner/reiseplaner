@@ -421,20 +421,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/subscription/create-checkout', supabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
-      const { planId } = req.body;
+      const { planId, billingInterval = 'monthly' } = req.body;
       
       if (!planId || !['pro', 'veteran'].includes(planId)) {
         return res.status(400).json({ message: 'Invalid plan ID' });
       }
       
+      if (!['monthly', 'yearly'].includes(billingInterval)) {
+        return res.status(400).json({ message: 'Invalid billing interval' });
+      }
+      
       // For now, return a mock checkout URL
       // TODO: Implement actual Stripe integration
-      const checkoutUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/pricing?plan=${planId}&success=mock`;
+      const checkoutUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/pricing?plan=${planId}&interval=${billingInterval}&success=mock`;
+      
+      const plan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
+      const price = billingInterval === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
       
       res.json({ 
         checkoutUrl,
         mock: true,
-        message: 'Mock checkout URL - real Stripe integration pending'
+        message: `Mock checkout URL - ${plan.name} (${billingInterval === 'yearly' ? 'Jährlich' : 'Monatlich'}) für €${price.toFixed(2)} - real Stripe integration pending`
       });
     } catch (error) {
       console.error('Error creating checkout session:', error);

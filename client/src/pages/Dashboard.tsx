@@ -249,7 +249,11 @@ export default function Dashboard() {
                   const IconComponent = getDestinationIcon(trip.destination || "");
 
                   return (
-                    <div key={trip.id} className="group border border-slate-200 rounded-lg p-4 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 bg-white/80 backdrop-blur-sm">
+                    <div 
+                      key={trip.id} 
+                      className="group border border-slate-200 rounded-lg p-4 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 bg-white/80 backdrop-blur-sm cursor-pointer"
+                      onClick={() => setLocation(`/community`)}
+                    >
                       {/* Header mit Icon */}
                       <div className="flex items-center space-x-3 mb-3">
                         <div className="p-2 bg-slate-100 rounded-lg">
@@ -278,7 +282,10 @@ export default function Dashboard() {
                         <Button 
                           size="sm"
                           variant="ghost"
-                          onClick={() => copyTripMutation.mutate(trip)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyTripMutation.mutate(trip);
+                          }}
                           disabled={copyTripMutation.isPending}
                           className="text-primary hover:text-primary/90"
                         >

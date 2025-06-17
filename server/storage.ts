@@ -29,7 +29,7 @@ import {
 } from "../shared/schema";
 import { db } from "./db";
 import { eq, desc, and, count, sql } from "drizzle-orm";
-import { SUBSCRIPTION_LIMITS, type SubscriptionStatus, type SubscriptionInfo } from './types/subscription';
+import { SUBSCRIPTION_LIMITS, type SubscriptionStatus, type SubscriptionInfo, type BillingInterval } from './types/subscription';
 
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
@@ -604,6 +604,7 @@ export class DatabaseStorage implements IStorage {
 
     const userTrips = await this.getTripsByUserId(userId);
     const subscriptionStatus: SubscriptionStatus = (user.subscriptionStatus as SubscriptionStatus) || 'free';
+    const billingInterval: BillingInterval = (user.billingInterval as BillingInterval) || 'monthly';
     const limits = SUBSCRIPTION_LIMITS[subscriptionStatus];
 
     // Check if subscription is expired
@@ -614,12 +615,13 @@ export class DatabaseStorage implements IStorage {
 
     return {
       status: effectiveStatus,
-      expiresAt: user.subscriptionExpiresAt,
+      billingInterval: effectiveStatus === 'free' ? undefined : billingInterval,
+      expiresAt: user.subscriptionExpiresAt || undefined,
       tripsUsed: userTrips.length,
       tripsLimit: effectiveLimits.tripsLimit,
       canExport: effectiveLimits.canExport,
-      stripeCustomerId: user.stripeCustomerId,
-      stripeSubscriptionId: user.stripeSubscriptionId,
+      stripeCustomerId: user.stripeCustomerId || undefined,
+      stripeSubscriptionId: user.stripeSubscriptionId || undefined,
     };
   }
 
