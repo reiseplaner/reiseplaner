@@ -92,8 +92,8 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
 };
 
 export const STRIPE_PRICE_IDS = {
-  pro_monthly: process.env.STRIPE_PRO_MONTHLY_PRICE_ID || 'price_pro_monthly',
-  pro_yearly: process.env.STRIPE_PRO_YEARLY_PRICE_ID || 'price_pro_yearly',
-  veteran_monthly: process.env.STRIPE_VETERAN_MONTHLY_PRICE_ID || 'price_veteran_monthly',
-  veteran_yearly: process.env.STRIPE_VETERAN_YEARLY_PRICE_ID || 'price_veteran_yearly',
+  pro_monthly: 'price_1Rb70IJxk5EsZYTyL1iGzCj5',
+  pro_yearly: 'price_1Rb5hvJxk5EsZYTyc5xzvOcs',
+  veteran_monthly: 'price_1Rb5j8Jxk5EsZYTyTrb7zqWz',
+  veteran_yearly: 'price_1Rb6JWJxk5EsZYTyFgklpQUx',
 }; 

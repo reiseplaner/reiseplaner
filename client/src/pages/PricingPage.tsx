@@ -39,7 +39,51 @@ export default function PricingPage() {
 
   useEffect(() => {
     fetchPlansAndSubscription();
+    
+    // Check for successful payment
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const sessionId = urlParams.get('session_id');
+    
+    if (success === 'true' && sessionId) {
+      verifyCheckout(sessionId);
+    }
   }, []);
+
+  const verifyCheckout = async (sessionId: string) => {
+    try {
+      const response = await apiRequest('POST', '/api/checkout/verify', {
+        sessionId
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: 'Zahlung erfolgreich!',
+          description: `Ihr ${result.plan.toUpperCase()}-Plan wurde aktiviert.`,
+        });
+        
+        // Refresh subscription data
+        await fetchPlansAndSubscription();
+        
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else {
+        toast({
+          title: 'Fehler',
+          description: result.message || 'Zahlung konnte nicht verifiziert werden',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying checkout:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Zahlung konnte nicht verifiziert werden',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const fetchPlansAndSubscription = async () => {
     try {

@@ -644,11 +644,12 @@ export class DatabaseStorage implements IStorage {
     return subscriptionInfo.canExport;
   }
 
-  async updateUserSubscription(userId: string, subscriptionStatus: SubscriptionStatus, expiresAt?: string, stripeCustomerId?: string, stripeSubscriptionId?: string): Promise<User | undefined> {
+  async updateUserSubscription(userId: string, subscriptionStatus: SubscriptionStatus, expiresAt?: string, stripeCustomerId?: string, stripeSubscriptionId?: string, billingInterval?: BillingInterval): Promise<User | undefined> {
     const [updatedUser] = await db
       .update(users)
       .set({
         subscriptionStatus,
+        billingInterval: billingInterval || 'monthly',
         subscriptionExpiresAt: expiresAt,
         stripeCustomerId,
         stripeSubscriptionId,

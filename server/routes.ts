@@ -19,6 +19,8 @@ import path from "path";
 import fs from "fs";
 import { checkTripLimit, checkExportPermission } from './middleware/subscription';
 import { SUBSCRIPTION_PLANS, STRIPE_PRICE_IDS } from './types/subscription';
+import stripe from './stripe';
+import { handleStripeWebhook } from './webhooks/stripe';
 
 // Configure multer for file uploads
 const upload = multer({
@@ -395,6 +397,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stripe webhook (must be before body parsing middleware)
+  app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+  // Check and update subscription status after successful payment
+  app.post('/api/checkout/verify', supabaseAuth, async (req: any, res) => {
+    try {
+      const { sessionId } = req.body;
+      const userId = req.user.id;
+
+      if (!sessionId) {
+        return res.status(400).json({ message: 'Session ID is required' });
+      }
+
+      // Retrieve the checkout session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      if (session.payment_status === 'paid' && session.metadata?.userId === userId) {
+        const planId = session.metadata.planId;
+        const billingInterval = session.metadata.billingInterval;
+        
+        // Get the subscription details
+        if (session.subscription) {
+          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
+          const expiresAt = new Date((subscription as any).current_period_end * 1000).toISOString();
+          
+          // Update user subscription in database
+          await storage.updateUserSubscription(
+            userId,
+            planId as any,
+            expiresAt,
+            session.customer as string,
+            subscription.id
+          );
+          
+          console.log(`✅ Updated subscription for user ${userId} to ${planId} plan`);
+          
+          res.json({ 
+            success: true, 
+            message: 'Subscription updated successfully',
+            plan: planId,
+            expiresAt 
+          });
+        } else {
+          res.status(400).json({ message: 'No subscription found in session' });
+        }
+      } else {
+        res.status(400).json({ message: 'Payment not completed or invalid session' });
+      }
+    } catch (error) {
+      console.error('Error verifying checkout:', error);
+      res.status(500).json({ message: 'Failed to verify checkout' });
+    }
+  });
+
   // Subscription routes
   app.get('/api/user/subscription', supabaseAuth, async (req: any, res) => {
     try {
@@ -430,18 +486,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!['monthly', 'yearly'].includes(billingInterval)) {
         return res.status(400).json({ message: 'Invalid billing interval' });
       }
+
+      // Get the user to find or create Stripe customer
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      let customerId = user.stripeCustomerId;
+
+      // Create Stripe customer if doesn't exist
+      if (!customerId) {
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: {
+            userId: userId,
+            username: user.username || 'unknown'
+          },
+        });
+        customerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUserSubscription(userId, user.subscriptionStatus as any, undefined, customerId);
+      }
+
+      // Get the correct price ID
+      const priceKey = `${planId}_${billingInterval}` as keyof typeof STRIPE_PRICE_IDS;
+      const priceId = STRIPE_PRICE_IDS[priceKey];
       
-      // For now, return a mock checkout URL
-      // TODO: Implement actual Stripe integration
-      const checkoutUrl = `${process.env.CLIENT_URL || 'http://localhost:5173'}/pricing?plan=${planId}&interval=${billingInterval}&success=mock`;
-      
-      const plan = SUBSCRIPTION_PLANS[planId as keyof typeof SUBSCRIPTION_PLANS];
-      const price = billingInterval === 'yearly' ? plan.yearlyPrice : plan.monthlyPrice;
-      
+      if (!priceId) {
+        return res.status(400).json({ message: 'Invalid price configuration' });
+      }
+
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        customer: customerId,
+        mode: 'subscription',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        success_url: `https://d30aa00c-8763-4ca1-9417-b90045ee5959-00-2ci4nyryysra1.riker.replit.dev/pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://d30aa00c-8763-4ca1-9417-b90045ee5959-00-2ci4nyryysra1.riker.replit.dev/pricing?canceled=true`,
+        metadata: {
+          userId: userId,
+          planId: planId,
+          billingInterval: billingInterval,
+        },
+      });
+
       res.json({ 
-        checkoutUrl,
-        mock: true,
-        message: `Mock checkout URL - ${plan.name} (${billingInterval === 'yearly' ? 'Jährlich' : 'Monatlich'}) für €${price.toFixed(2)} - real Stripe integration pending`
+        checkoutUrl: session.url,
+        sessionId: session.id
       });
     } catch (error) {
       console.error('Error creating checkout session:', error);
