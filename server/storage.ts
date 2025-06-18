@@ -43,6 +43,8 @@ export interface IStorage {
   
   // Subscription operations
   getUserSubscriptionStatus(userId: string): Promise<SubscriptionInfo>;
+  getSubscription(userId: string): Promise<{ status: SubscriptionStatus; billingInterval?: BillingInterval } | null>;
+  updateSubscription(userId: string, data: { status: SubscriptionStatus; billingInterval?: BillingInterval; stripeSessionId?: string; stripeSubscriptionId?: string }): Promise<void>;
   canCreateTrip(userId: string): Promise<{ allowed: boolean; reason?: string; currentPlan?: string }>;
   canExportTrip(userId: string): Promise<boolean>;
   updateUserSubscription(userId: string, subscriptionStatus: SubscriptionStatus, expiresAt?: string, stripeCustomerId?: string, stripeSubscriptionId?: string): Promise<User | undefined>;
@@ -688,6 +690,34 @@ export class DatabaseStorage implements IStorage {
       .delete(costSharingReceipts)
       .where(and(eq(costSharingReceipts.id, id), eq(costSharingReceipts.tripId, tripId)));
     return (result.rowCount ?? 0) > 0;
+  }
+
+  // Additional subscription methods for Stripe integration
+  async getSubscription(userId: string): Promise<{ status: SubscriptionStatus; billingInterval?: BillingInterval } | null> {
+    const user = await this.getUser(userId);
+    if (!user) return null;
+    
+    return {
+      status: (user.subscriptionStatus as SubscriptionStatus) || 'free',
+      billingInterval: (user.billingInterval as BillingInterval) || 'monthly'
+    };
+  }
+
+  async updateSubscription(userId: string, data: { 
+    status: SubscriptionStatus; 
+    billingInterval?: BillingInterval; 
+    stripeSessionId?: string; 
+    stripeSubscriptionId?: string 
+  }): Promise<void> {
+    await db
+      .update(users)
+      .set({
+        subscriptionStatus: data.status,
+        billingInterval: data.billingInterval || 'monthly',
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId));
   }
 }
 

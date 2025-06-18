@@ -92,8 +92,8 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionStatus, SubscriptionPlan> = 
 };
 
 export const STRIPE_PRICE_IDS = {
-  pro_monthly: 'price_1Rb70IJxk5EsZYTyL1iGzCj5',
-  pro_yearly: 'price_1Rb5hvJxk5EsZYTyc5xzvOcs',
-  veteran_monthly: 'price_1Rb5j8Jxk5EsZYTyTrb7zqWz',
-  veteran_yearly: 'price_1Rb6JWJxk5EsZYTyFgklpQUx',
+  pro_monthly: 'price_1Rb70IJxk5EsZYTyL1iGzCj5', // Test Mode
+  pro_yearly: 'price_1RbSpwJxk5EsZYTyr3G1aEMH', // Test Mode  
+  veteran_monthly: 'price_1RbSqbJxk5EsZYTygJBvXfpN', // Test Mode
+  veteran_yearly: 'price_1RbSqHJxk5EsZYTyLs3fP1xM', // Test Mode
 }; 

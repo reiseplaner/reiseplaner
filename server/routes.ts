@@ -400,56 +400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Stripe webhook (must be before body parsing middleware)
   app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
-  // Check and update subscription status after successful payment
-  app.post('/api/checkout/verify', supabaseAuth, async (req: any, res) => {
-    try {
-      const { sessionId } = req.body;
-      const userId = req.user.id;
-
-      if (!sessionId) {
-        return res.status(400).json({ message: 'Session ID is required' });
-      }
-
-      // Retrieve the checkout session from Stripe
-      const session = await stripe.checkout.sessions.retrieve(sessionId);
-      
-      if (session.payment_status === 'paid' && session.metadata?.userId === userId) {
-        const planId = session.metadata.planId;
-        const billingInterval = session.metadata.billingInterval;
-        
-        // Get the subscription details
-        if (session.subscription) {
-          const subscription = await stripe.subscriptions.retrieve(session.subscription as string);
-          const expiresAt = new Date((subscription as any).current_period_end * 1000).toISOString();
-          
-          // Update user subscription in database
-          await storage.updateUserSubscription(
-            userId,
-            planId as any,
-            expiresAt,
-            session.customer as string,
-            subscription.id
-          );
-          
-          console.log(`✅ Updated subscription for user ${userId} to ${planId} plan`);
-          
-          res.json({ 
-            success: true, 
-            message: 'Subscription updated successfully',
-            plan: planId,
-            expiresAt 
-          });
-        } else {
-          res.status(400).json({ message: 'No subscription found in session' });
-        }
-      } else {
-        res.status(400).json({ message: 'Payment not completed or invalid session' });
-      }
-    } catch (error) {
-      console.error('Error verifying checkout:', error);
-      res.status(500).json({ message: 'Failed to verify checkout' });
-    }
-  });
+  // Removed problematic checkout verify endpoint - using the one below with simpler updateSubscription
 
   // Subscription routes
   app.get('/api/user/subscription', supabaseAuth, async (req: any, res) => {
@@ -473,80 +424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Stripe checkout session creation
-  app.post('/api/subscription/create-checkout', supabaseAuth, async (req: any, res) => {
-    try {
-      const userId = req.user.id;
-      const { planId, billingInterval = 'monthly' } = req.body;
-      
-      if (!planId || !['pro', 'veteran'].includes(planId)) {
-        return res.status(400).json({ message: 'Invalid plan ID' });
-      }
-      
-      if (!['monthly', 'yearly'].includes(billingInterval)) {
-        return res.status(400).json({ message: 'Invalid billing interval' });
-      }
-
-      // Get the user to find or create Stripe customer
-      const user = await storage.getUser(userId);
-      if (!user) {
-        return res.status(404).json({ message: 'User not found' });
-      }
-
-      let customerId = user.stripeCustomerId;
-
-      // Create Stripe customer if doesn't exist
-      if (!customerId) {
-        const customer = await stripe.customers.create({
-          email: user.email || undefined,
-          metadata: {
-            userId: userId,
-            username: user.username || 'unknown'
-          },
-        });
-        customerId = customer.id;
-        
-        // Update user with Stripe customer ID
-        await storage.updateUserSubscription(userId, user.subscriptionStatus as any, undefined, customerId);
-      }
-
-      // Get the correct price ID
-      const priceKey = `${planId}_${billingInterval}` as keyof typeof STRIPE_PRICE_IDS;
-      const priceId = STRIPE_PRICE_IDS[priceKey];
-      
-      if (!priceId) {
-        return res.status(400).json({ message: 'Invalid price configuration' });
-      }
-
-      // Create Stripe checkout session
-      const session = await stripe.checkout.sessions.create({
-        customer: customerId,
-        mode: 'subscription',
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        success_url: `https://d30aa00c-8763-4ca1-9417-b90045ee5959-00-2ci4nyryysra1.riker.replit.dev/pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `https://d30aa00c-8763-4ca1-9417-b90045ee5959-00-2ci4nyryysra1.riker.replit.dev/pricing?canceled=true`,
-        metadata: {
-          userId: userId,
-          planId: planId,
-          billingInterval: billingInterval,
-        },
-      });
-
-      res.json({ 
-        checkoutUrl: session.url,
-        sessionId: session.id
-      });
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      res.status(500).json({ message: 'Failed to create checkout session' });
-    }
-  });
+  // Removed duplicate create-checkout endpoint - using the one below with proper logging
 
   // Export permission check (for future PDF export feature)
   app.get('/api/user/can-export', supabaseAuth, async (req: any, res) => {
@@ -1315,6 +1193,169 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         message: "Fehler beim Suchen von Flügen",
+        error: error.message 
+      });
+    }
+  });
+
+  // Stripe Webhook Handler
+  app.post('/webhook/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+  // Stripe Subscription Routes
+  app.get('/api/subscription/plans', (req, res) => {
+    res.json(SUBSCRIPTION_PLANS);
+  });
+
+  app.get('/api/user/subscription', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const subscription = await storage.getSubscription(userId);
+      
+      if (!subscription) {
+        // Return default free subscription
+        return res.json({
+          status: 'free',
+          billingInterval: 'monthly',
+          tripsUsed: 0,
+          tripsLimit: SUBSCRIPTION_PLANS.free.tripsLimit,
+          canExport: SUBSCRIPTION_PLANS.free.canExport
+        });
+      }
+
+      // Get trips count for this user
+      const trips = await storage.getTripsByUserId(userId);
+      const tripsUsed = trips.length;
+
+      const plan = SUBSCRIPTION_PLANS[subscription.status];
+      
+      res.json({
+        status: subscription.status,
+        billingInterval: subscription.billingInterval || 'monthly',
+        tripsUsed,
+        tripsLimit: plan.tripsLimit,
+        canExport: plan.canExport
+      });
+    } catch (error) {
+      console.error('Error fetching subscription:', error);
+      res.status(500).json({ message: 'Failed to fetch subscription' });
+    }
+  });
+
+  app.post('/api/subscription/create-checkout', supabaseAuth, async (req: any, res) => {
+    try {
+      const { planId, billingInterval } = req.body;
+      const userId = req.user.id;
+
+      console.log('🟡 Creating checkout session:', { planId, billingInterval, userId });
+
+      if (!planId || !billingInterval || planId === 'free') {
+        return res.status(400).json({ message: 'Invalid plan or billing interval' });
+      }
+
+      // Get the price ID for this plan and interval
+      const priceKey = `${planId}_${billingInterval}` as keyof typeof STRIPE_PRICE_IDS;
+      const priceId = STRIPE_PRICE_IDS[priceKey];
+      if (!priceId) {
+        console.error('🔴 Price ID not found for:', planId, billingInterval, 'Key:', priceKey);
+        return res.status(400).json({ message: 'Price ID not found for selected plan' });
+      }
+
+      console.log('🟡 Using Stripe Price ID:', priceId);
+
+      // Create Stripe checkout session
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price: priceId,
+            quantity: 1,
+          },
+        ],
+        mode: 'subscription',
+        success_url: `https://d30aa00c-8763-4ca1-9417-b90045ee5959-00-2ci4nyryysra1.riker.replit.dev/pricing?session_id={CHECKOUT_SESSION_ID}&success=true`,
+        cancel_url: `https://d30aa00c-8763-4ca1-9417-b90045ee5959-00-2ci4nyryysra1.riker.replit.dev/pricing?canceled=true`,
+        client_reference_id: userId,
+        metadata: {
+          userId,
+          planId,
+          billingInterval,
+        },
+      });
+
+      console.log('✅ Checkout session created:', session.id);
+      res.json({ checkoutUrl: session.url });
+    } catch (error: any) {
+      console.error('🔴 Error creating checkout session:', error);
+      res.status(500).json({ message: 'Failed to create checkout session', error: error.message });
+    }
+  });
+
+  app.post('/api/checkout/verify', supabaseAuth, async (req: any, res) => {
+    try {
+      const { sessionId } = req.body;
+      const userId = req.user.id;
+
+      console.log('🟡 Verifying checkout session:', sessionId, 'for user:', userId);
+
+      if (!sessionId) {
+        return res.status(400).json({ message: 'Session ID is required' });
+      }
+
+      // Retrieve the checkout session from Stripe
+      const session = await stripe.checkout.sessions.retrieve(sessionId);
+      
+      console.log('🟡 Retrieved session:', {
+        id: session.id,
+        payment_status: session.payment_status,
+        client_reference_id: session.client_reference_id,
+        metadata: session.metadata
+      });
+
+      if (session.payment_status !== 'paid') {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Payment not completed' 
+        });
+      }
+
+      if (session.client_reference_id !== userId) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Session does not belong to current user' 
+        });
+      }
+
+      const planId = session.metadata?.planId;
+      const billingInterval = session.metadata?.billingInterval;
+
+      if (!planId || !billingInterval) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Invalid session metadata' 
+        });
+      }
+
+      // Update user subscription in database
+      await storage.updateSubscription(userId, {
+        status: planId as any,
+        billingInterval: billingInterval as any,
+        stripeSessionId: sessionId,
+        stripeSubscriptionId: session.subscription as string
+      });
+
+      console.log('✅ Subscription updated for user:', userId, 'plan:', planId, 'interval:', billingInterval);
+
+      res.json({
+        success: true,
+        plan: planId,
+        billingInterval,
+        message: 'Subscription activated successfully'
+      });
+    } catch (error: any) {
+      console.error('🔴 Error verifying checkout:', error);
+      res.status(500).json({ 
+        success: false, 
+        message: 'Failed to verify checkout',
         error: error.message 
       });
     }
