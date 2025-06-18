@@ -1262,8 +1262,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('🟡 Using Stripe Price ID:', priceId);
 
+      // Get user data
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      let customerId = user.stripeCustomerId;
+
+      // Create Stripe customer if not exists
+      if (!customerId) {
+        console.log('🔧 Creating new Stripe customer for user:', userId);
+        const customer = await stripe.customers.create({
+          email: user.email || undefined,
+          metadata: {
+            userId: userId,
+          },
+        });
+        customerId = customer.id;
+
+        // Update user with Stripe customer ID
+        await storage.updateUserStripeCustomerId(userId, customerId);
+        console.log('✅ Created Stripe customer:', customerId);
+      }
+
       // Create Stripe checkout session
       const session = await stripe.checkout.sessions.create({
+        customer: customerId,
         payment_method_types: ['card'],
         line_items: [
           {
@@ -1358,6 +1383,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Failed to verify checkout',
         error: error.message 
       });
+    }
+  });
+
+  // Debug endpoint to check user's Stripe customer ID
+  app.get('/api/debug/stripe-customer', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      res.json({
+        userId,
+        hasStripeCustomerId: !!user?.stripeCustomerId,
+        stripeCustomerId: user?.stripeCustomerId,
+        subscriptionStatus: user?.subscriptionStatus,
+        billingInterval: user?.billingInterval
+      });
+    } catch (error) {
+      console.error('🔴 Error checking Stripe customer:', error);
+      res.status(500).json({ message: 'Failed to check Stripe customer' });
+    }
+  });
+
+  // Stripe invoice endpoints
+  app.get('/api/billing/invoices', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      console.log(`🔍 User ${userId} - stripeCustomerId: ${user?.stripeCustomerId || 'NONE'}`);
+      
+      if (!user || !user.stripeCustomerId) {
+        console.log(`🔍 No Stripe customer ID found for user ${userId}`);
+        return res.json({ invoices: [] });
+      }
+
+      // Fetch invoices from Stripe
+      const invoices = await stripe.invoices.list({
+        customer: user.stripeCustomerId,
+        limit: 50, // Get last 50 invoices
+        status: 'paid', // Only show paid invoices
+      });
+
+      const formattedInvoices = invoices.data.map(invoice => ({
+        id: invoice.id,
+        amount: invoice.total / 100, // Convert from cents to euros
+        currency: invoice.currency,
+        status: invoice.status,
+        paidAt: invoice.status_transitions.paid_at ? new Date(invoice.status_transitions.paid_at * 1000).toISOString() : null,
+        createdAt: new Date(invoice.created * 1000).toISOString(),
+        number: invoice.number,
+        description: invoice.lines.data[0]?.description || 'Subscription',
+        hostedInvoiceUrl: invoice.hosted_invoice_url,
+        invoicePdf: invoice.invoice_pdf,
+        period: {
+          start: new Date(invoice.lines.data[0]?.period?.start * 1000 || 0).toISOString(),
+          end: new Date(invoice.lines.data[0]?.period?.end * 1000 || 0).toISOString(),
+        }
+      }));
+
+      console.log(`✅ Retrieved ${formattedInvoices.length} invoices for user ${userId}`);
+      res.json({ invoices: formattedInvoices });
+    } catch (error) {
+      console.error('🔴 Error fetching invoices:', error);
+      res.status(500).json({ message: 'Failed to fetch invoices' });
+    }
+  });
+
+  // Get specific invoice details
+  app.get('/api/billing/invoices/:invoiceId', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { invoiceId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.stripeCustomerId) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+
+      // Fetch the specific invoice from Stripe
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      
+      // Verify that this invoice belongs to the user's customer
+      if (invoice.customer !== user.stripeCustomerId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+
+      const formattedInvoice = {
+        id: invoice.id,
+        amount: invoice.total / 100,
+        currency: invoice.currency,
+        status: invoice.status,
+        paidAt: invoice.status_transitions.paid_at ? new Date(invoice.status_transitions.paid_at * 1000).toISOString() : null,
+        createdAt: new Date(invoice.created * 1000).toISOString(),
+        number: invoice.number,
+        description: invoice.lines.data[0]?.description || 'Subscription',
+        hostedInvoiceUrl: invoice.hosted_invoice_url,
+        invoicePdf: invoice.invoice_pdf,
+        period: {
+          start: new Date(invoice.lines.data[0]?.period?.start * 1000 || 0).toISOString(),
+          end: new Date(invoice.lines.data[0]?.period?.end * 1000 || 0).toISOString(),
+        },
+        lines: invoice.lines.data.map(line => ({
+          description: line.description,
+          amount: line.amount / 100,
+          currency: line.currency,
+          period: {
+            start: new Date(line.period?.start * 1000 || 0).toISOString(),
+            end: new Date(line.period?.end * 1000 || 0).toISOString(),
+          }
+        }))
+      };
+
+      res.json({ invoice: formattedInvoice });
+    } catch (error) {
+      console.error('🔴 Error fetching invoice:', error);
+      res.status(500).json({ message: 'Failed to fetch invoice' });
+    }
+  });
+
+  // Create Stripe Customer Portal session
+  app.post('/api/billing/portal', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.stripeCustomerId) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+
+      // Create a Customer Portal session
+      const portalSession = await stripe.billingPortal.sessions.create({
+        customer: user.stripeCustomerId,
+        return_url: `${req.protocol}://${req.get('host')}/profile?tab=subscription`,
+      });
+
+      res.json({ url: portalSession.url });
+    } catch (error) {
+      console.error('🔴 Error creating billing portal session:', error);
+      res.status(500).json({ message: 'Failed to create billing portal session' });
     }
   });
 

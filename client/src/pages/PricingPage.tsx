@@ -382,21 +382,21 @@ export default function PricingPage() {
                       <Button className="w-full bg-green-500 hover:bg-green-600 text-white rounded-full py-3 font-semibold" disabled>
                         ✓ Aktueller Plan
                       </Button>
+                    ) : plan.id === 'free' ? (
+                      // Kein Button für kostenlosen Plan
+                      <div className="h-12 flex items-center justify-center">
+                        <span className="text-slate-500 text-sm">Bereits verfügbar</span>
+                      </div>
                     ) : (
                       <Button
-                        className={`w-full rounded-full py-3 font-semibold transition-all duration-200 ${
-                          plan.id === 'free' 
-                            ? 'border-2 border-slate-200 text-slate-700 hover:bg-slate-50' 
-                            : 'bg-slate-900 text-white hover:bg-slate-800'
-                        }`}
-                        variant={plan.id === 'free' ? 'outline' : 'default'}
+                        className="w-full bg-slate-900 text-white hover:bg-slate-800 rounded-full py-3 font-semibold transition-all duration-200"
                         onClick={() => handleUpgrade(plan.id, billingInterval)}
                         disabled={upgrading === plan.id}
                       >
                         {upgrading === plan.id ? (
                           'Upgrading...'
                         ) : (
-                          plan.id === 'free' ? 'Kostenlos bleiben' : `Auf ${plan.name} upgraden`
+                          `Auf ${plan.name} upgraden`
                         )}
                       </Button>
                     )}

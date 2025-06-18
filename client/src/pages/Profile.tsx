@@ -20,7 +20,10 @@ import {
   Loader2,
   Upload,
   Trash2,
-  ArrowLeft
+  ArrowLeft,
+  Download,
+  ExternalLink,
+  Settings
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -46,6 +49,53 @@ export default function Profile() {
     enabled: !!dbUser && !cachedProfileImageUrl,
     retry: false,
   });
+
+  // Query to get subscription data
+  const { data: subscriptionData } = useQuery<{
+    status: string;
+    billingInterval?: string;
+    tripsUsed: number;
+    tripsLimit: number;
+    canExport: boolean;
+  }>({
+    queryKey: ['/api/user/subscription'],
+    enabled: !!dbUser,
+    retry: false,
+  });
+
+  // Query to get invoices data
+  const { data: invoicesData, refetch: refetchInvoices, error: invoicesError } = useQuery<{
+    invoices: Array<{
+      id: string;
+      amount: number;
+      currency: string;
+      status: string;
+      paidAt: string | null;
+      createdAt: string;
+      number: string;
+      description: string;
+      hostedInvoiceUrl: string;
+      invoicePdf: string;
+      period: {
+        start: string;
+        end: string;
+      };
+    }>;
+  }>({
+    queryKey: ['/api/billing/invoices'],
+    enabled: !!dbUser && subscriptionData?.status !== 'free',
+    retry: false,
+  });
+
+  // Debug logging for invoices
+  useEffect(() => {
+    if (subscriptionData) {
+      console.log('🔍 Subscription status:', subscriptionData.status);
+      console.log('🔍 Should load invoices:', subscriptionData.status !== 'free');
+      console.log('🔍 Invoices data:', invoicesData);
+      console.log('🔍 Invoices error:', invoicesError);
+    }
+  }, [subscriptionData, invoicesData, invoicesError]);
 
   // Debug logging
   useEffect(() => {
@@ -179,6 +229,25 @@ export default function Profile() {
       toast({
         title: "Fehler",
         description: error.message || "Passwort konnte nicht geändert werden.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Create billing portal session mutation
+  const billingPortalMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/billing/portal", {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      // Redirect to Stripe customer portal
+      window.open(data.url, '_blank');
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Fehler",
+        description: error.message || "Billing-Portal konnte nicht geöffnet werden.",
         variant: "destructive",
       });
     },
@@ -415,28 +484,91 @@ export default function Profile() {
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary">Kostenlos</Badge>
-                      <span className="font-medium">Free Plan</span>
+                      <Badge variant={subscriptionData?.status === 'free' ? 'secondary' : 'default'}>
+                        {subscriptionData?.status === 'free' ? 'Kostenlos' : 
+                         subscriptionData?.status === 'pro' ? 'Pro' : 
+                         subscriptionData?.status === 'veteran' ? 'Veteran' : 'Unbekannt'}
+                      </Badge>
+                      <span className="font-medium">
+                        {subscriptionData?.status === 'free' ? 'Free Plan' : 
+                         subscriptionData?.status === 'pro' ? 'Pro Plan' : 
+                         subscriptionData?.status === 'veteran' ? 'Veteran Plan' : 'Unbekannter Plan'}
+                      </span>
+                      {subscriptionData?.billingInterval && (
+                        <Badge variant="outline">
+                          {subscriptionData.billingInterval === 'monthly' ? 'Monatlich' : 'Jährlich'}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm text-slate-600 mt-1">
-                      Grundlegende Features für Reiseplanung
+                      {subscriptionData?.status === 'free' ? 'Grundlegende Features für Reiseplanung' :
+                       subscriptionData?.status === 'pro' ? 'Erweiterte Features für Reiseplanung' :
+                       subscriptionData?.status === 'veteran' ? 'Alle Premium Features inklusive' : 
+                       'Status wird geladen...'}
+                    </p>
+                    <p className="text-sm text-slate-500 mt-2">
+                      Reisen: {subscriptionData?.tripsUsed || 0} / {subscriptionData?.tripsLimit === Infinity ? '∞' : subscriptionData?.tripsLimit || 0}
                     </p>
                   </div>
-                  <Button>
-                    Upgrade zu Premium
-                  </Button>
+                  {subscriptionData?.status === 'free' && (
+                    <Button onClick={() => setLocation('/pricing')}>
+                      Upgrade zu Premium
+                    </Button>
+                  )}
+                  {subscriptionData?.status !== 'free' && (
+                    <Button variant="outline" onClick={() => setLocation('/pricing')}>
+                      Plan verwalten
+                    </Button>
+                  )}
                 </div>
 
                 <Separator className="my-6" />
 
                 <div>
-                  <h4 className="font-medium mb-3">Premium Features</h4>
+                  <h4 className="font-medium mb-3">
+                    {subscriptionData?.status === 'free' ? 'Premium Features' : 'Deine Features'}
+                  </h4>
                   <ul className="space-y-2 text-sm text-slate-600">
-                    <li>• Unbegrenzte Reisepläne</li>
-                    <li>• Erweiterte Budget-Analyse</li>
-                    <li>• Priority Support</li>
-                    <li>• Offline-Zugriff</li>
-                    <li>• Erweiterte Community-Features</li>
+                    {subscriptionData?.status === 'free' ? (
+                      <>
+                        <li>• Unbegrenzte Reisepläne</li>
+                        <li>• Erweiterte Budget-Analyse</li>
+                        <li>• Priority Support</li>
+                        <li>• PDF Export</li>
+                        <li>• Erweiterte Community-Features</li>
+                      </>
+                    ) : (
+                      <>
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-600">✓</span>
+                          {subscriptionData?.tripsLimit === Infinity ? 'Unbegrenzte Reisepläne' : `Bis zu ${subscriptionData?.tripsLimit} Reisepläne`}
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-600">✓</span>
+                          Erweiterte Budget-Analyse
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-600">✓</span>
+                          {subscriptionData?.canExport ? 'PDF Export verfügbar' : 'PDF Export nicht verfügbar'}
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span className="text-green-600">✓</span>
+                          Priority Support
+                        </li>
+                        {subscriptionData?.status === 'veteran' && (
+                          <>
+                            <li className="flex items-center gap-2">
+                              <span className="text-green-600">✓</span>
+                              Erweiterte Kostenteilung
+                            </li>
+                            <li className="flex items-center gap-2">
+                              <span className="text-green-600">✓</span>
+                              Beta-Features
+                            </li>
+                          </>
+                        )}
+                      </>
+                    )}
                   </ul>
                 </div>
               </CardContent>
@@ -444,18 +576,110 @@ export default function Profile() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Rechnungen
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    Rechnungen
+                  </div>
+                  {subscriptionData?.status !== 'free' && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => billingPortalMutation.mutate()}
+                      disabled={billingPortalMutation.isPending}
+                      className="flex items-center gap-2"
+                    >
+                      <Settings className="h-4 w-4" />
+                      {billingPortalMutation.isPending ? 'Öffne...' : 'Billing verwalten'}
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Alert>
-                  <FileText className="h-4 w-4" />
-                  <AlertDescription>
-                    Du hast noch keine Rechnungen. Upgrade zu Premium, um deine Rechnungshistorie zu sehen.
-                  </AlertDescription>
-                </Alert>
+                {subscriptionData?.status === 'free' ? (
+                  <Alert>
+                    <FileText className="h-4 w-4" />
+                    <AlertDescription>
+                      Du hast noch keine Rechnungen. Upgrade zu Premium, um deine Rechnungshistorie zu sehen.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <div className="space-y-4">
+                    {!invoicesData?.invoices || invoicesData.invoices.length === 0 ? (
+                      <Alert>
+                        <FileText className="h-4 w-4" />
+                        <AlertDescription>
+                          Noch keine Rechnungen vorhanden. Deine ersten Rechnungen werden hier angezeigt, sobald sie verfügbar sind.
+                        </AlertDescription>
+                      </Alert>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="text-sm text-slate-600 mb-4">
+                          {invoicesData.invoices.length} Rechnung{invoicesData.invoices.length !== 1 ? 'en' : ''} gefunden
+                        </div>
+                        {invoicesData.invoices.map((invoice) => (
+                          <div
+                            key={invoice.id}
+                            className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 transition-colors"
+                          >
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  {invoice.number || `#${invoice.id.slice(-8)}`}
+                                </Badge>
+                                <Badge 
+                                  variant={invoice.status === 'paid' ? 'default' : 'secondary'}
+                                  className={invoice.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                                >
+                                  {invoice.status === 'paid' ? 'Bezahlt' : invoice.status}
+                                </Badge>
+                              </div>
+                              <div className="font-medium text-slate-900">
+                                {invoice.description}
+                              </div>
+                              <div className="text-sm text-slate-600 mt-1">
+                                {new Date(invoice.period.start).toLocaleDateString('de-DE')} - {new Date(invoice.period.end).toLocaleDateString('de-DE')}
+                              </div>
+                              <div className="text-xs text-slate-500 mt-1">
+                                Bezahlt am: {invoice.paidAt ? new Date(invoice.paidAt).toLocaleDateString('de-DE') : 'N/A'}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <div className="font-semibold text-slate-900">
+                                  €{invoice.amount.toFixed(2)}
+                                </div>
+                                <div className="text-xs text-slate-500 uppercase">
+                                  {invoice.currency}
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(invoice.hostedInvoiceUrl, '_blank')}
+                                  className="flex items-center gap-1"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Ansehen
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(invoice.invoicePdf, '_blank')}
+                                  className="flex items-center gap-1"
+                                >
+                                  <Download className="h-3 w-3" />
+                                  PDF
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
