@@ -23,12 +23,14 @@ import {
   ArrowLeft,
   Download,
   ExternalLink,
-  Settings
+  Settings,
+  CreditCard
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
+import PaymentMethodsTab from "@/components/PaymentMethodsTab";
 
 export default function Profile() {
   const { user, dbUser, signOut } = useAuth();
@@ -375,9 +377,10 @@ export default function Profile() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="general">Allgemein</TabsTrigger>
             <TabsTrigger value="subscription">Abo & Billing</TabsTrigger>
+            <TabsTrigger value="payment">Zahlungsmethoden</TabsTrigger>
             <TabsTrigger value="security">Sicherheit</TabsTrigger>
             <TabsTrigger value="danger">Account</TabsTrigger>
           </TabsList>
@@ -682,6 +685,11 @@ export default function Profile() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Payment Methods Tab */}
+          <TabsContent value="payment" className="space-y-6">
+            <PaymentMethodsTab />
           </TabsContent>
 
           {/* Security Tab */}

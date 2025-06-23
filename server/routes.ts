@@ -1502,8 +1502,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Stripe Customer Portal session
-  app.post('/api/billing/portal', supabaseAuth, async (req: any, res) => {
+  // Get payment methods for a customer
+  app.get('/api/billing/payment-methods', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.stripeCustomerId) {
+        return res.json({ paymentMethods: [] });
+      }
+
+      // Fetch payment methods from Stripe
+      const paymentMethods = await stripe.paymentMethods.list({
+        customer: user.stripeCustomerId,
+        type: 'card',
+      });
+
+      // Get customer to check default payment method
+      const customer = await stripe.customers.retrieve(user.stripeCustomerId);
+      const defaultPaymentMethodId = typeof customer !== 'string' && !customer.deleted && customer.invoice_settings?.default_payment_method;
+
+      const formattedPaymentMethods = paymentMethods.data.map(pm => ({
+        id: pm.id,
+        type: pm.type,
+        card: pm.card ? {
+          brand: pm.card.brand,
+          last4: pm.card.last4,
+          expMonth: pm.card.exp_month,
+          expYear: pm.card.exp_year,
+        } : null,
+        isDefault: pm.id === defaultPaymentMethodId,
+      }));
+
+      res.json({ paymentMethods: formattedPaymentMethods });
+    } catch (error) {
+      console.error('🔴 Error fetching payment methods:', error);
+      res.status(500).json({ message: 'Failed to fetch payment methods' });
+    }
+  });
+
+  // Create setup intent for adding new payment method
+  app.post('/api/billing/setup-intent', supabaseAuth, async (req: any, res) => {
     try {
       const userId = req.user.id;
       const user = await storage.getUser(userId);
@@ -1512,15 +1551,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Customer not found' });
       }
 
+      // Create a Setup Intent
+      const setupIntent = await stripe.setupIntents.create({
+        customer: user.stripeCustomerId,
+        payment_method_types: ['card'],
+        usage: 'off_session',
+      });
+
+      res.json({ 
+        clientSecret: setupIntent.client_secret,
+        setupIntentId: setupIntent.id 
+      });
+    } catch (error) {
+      console.error('🔴 Error creating setup intent:', error);
+      res.status(500).json({ message: 'Failed to create setup intent' });
+    }
+  });
+
+  // Set default payment method
+  app.post('/api/billing/set-default-payment-method', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { paymentMethodId } = req.body;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.stripeCustomerId) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+
+      if (!paymentMethodId) {
+        return res.status(400).json({ message: 'Payment method ID is required' });
+      }
+
+      // Update customer's default payment method
+      await stripe.customers.update(user.stripeCustomerId, {
+        invoice_settings: {
+          default_payment_method: paymentMethodId,
+        },
+      });
+
+      res.json({ success: true, message: 'Standard-Zahlungsmethode erfolgreich geändert' });
+    } catch (error) {
+      console.error('🔴 Error setting default payment method:', error);
+      res.status(500).json({ message: 'Failed to set default payment method' });
+    }
+  });
+
+  // Delete payment method
+  app.delete('/api/billing/payment-methods/:paymentMethodId', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const { paymentMethodId } = req.params;
+      const user = await storage.getUser(userId);
+      
+      if (!user || !user.stripeCustomerId) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+
+      // Detach payment method from customer
+      await stripe.paymentMethods.detach(paymentMethodId);
+
+      res.json({ success: true, message: 'Zahlungsmethode erfolgreich entfernt' });
+    } catch (error) {
+      console.error('🔴 Error deleting payment method:', error);
+      res.status(500).json({ message: 'Failed to delete payment method' });
+    }
+  });
+
+  // Create Stripe Customer Portal session
+  app.post('/api/billing/portal', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      let stripeCustomerId = user.stripeCustomerId;
+
+      // Create Stripe customer if one doesn't exist
+      if (!stripeCustomerId) {
+        console.log(`🔧 Creating Stripe customer for user ${userId}`);
+        const customer = await stripe.customers.create({
+          email: user.email,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
+          metadata: {
+            userId: userId,
+          },
+        });
+        
+        stripeCustomerId = customer.id;
+        
+        // Update user with Stripe customer ID
+        await storage.updateUserSubscription(
+          userId,
+          user.subscriptionStatus as any || 'free',
+          user.subscriptionExpiresAt || undefined,
+          stripeCustomerId,
+          user.stripeSubscriptionId || undefined,
+          user.billingInterval as any || 'monthly'
+        );
+        
+        console.log(`✅ Created Stripe customer ${stripeCustomerId} for user ${userId}`);
+      }
+
       // Create a Customer Portal session
       const portalSession = await stripe.billingPortal.sessions.create({
-        customer: user.stripeCustomerId,
+        customer: stripeCustomerId,
         return_url: `${req.protocol}://${req.get('host')}/profile?tab=subscription`,
       });
 
       res.json({ url: portalSession.url });
     } catch (error) {
       console.error('🔴 Error creating billing portal session:', error);
+      
+      // Check for specific Stripe errors
+      if (error.message?.includes('No configuration provided')) {
+        return res.status(400).json({ 
+          message: 'Das Stripe Customer Portal muss zuerst im Stripe Dashboard konfiguriert werden. Gehe zu https://dashboard.stripe.com/settings/billing/portal und konfiguriere das Portal.' 
+        });
+      }
+      
       res.status(500).json({ message: 'Failed to create billing portal session' });
     }
   });
