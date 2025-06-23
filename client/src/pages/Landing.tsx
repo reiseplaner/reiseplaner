@@ -1,9 +1,11 @@
-import { MapPin, Wallet, Calendar, FileDown, ArrowRight, Check, Sparkles, Users, TrendingUp, Star } from "lucide-react";
+import { MapPin, Wallet, Calendar, FileDown, ArrowRight, Check, Sparkles, Users, TrendingUp, Star, X, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +16,131 @@ export default function Landing() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
+  const [activeDemoTab, setActiveDemoTab] = useState("budget");
+
+  // Demo-Daten
+  const demoTrip = {
+    budgetItems: [
+      { 
+        id: 1, 
+        category: "Transport", 
+        subcategory: "Flug", 
+        quantity: 2, 
+        unitPrice: "600", 
+        totalPrice: "1200", 
+        comment: "Hin- und Rückflug nach Tokio"
+      },
+      { 
+        id: 2, 
+        category: "Hotel", 
+        subcategory: "Hotel", 
+        quantity: 7, 
+        unitPrice: "120", 
+        totalPrice: "840", 
+        comment: "Shibuya Crossing Hotel"
+      },
+      { 
+        id: 3, 
+        category: "Verpflegung", 
+        subcategory: "Abendessen", 
+        quantity: 7, 
+        unitPrice: "30", 
+        totalPrice: "210", 
+        comment: "Lokale Restaurants"
+      },
+      { 
+        id: 4, 
+        category: "Aktivitäten", 
+        subcategory: "Stadtführung", 
+        quantity: 1, 
+        unitPrice: "90", 
+        totalPrice: "90", 
+        comment: "Tokio Highlights Tour"
+      },
+      { 
+        id: 5, 
+        category: "Aktivitäten", 
+        subcategory: "Sehenswürdigkeiten", 
+        quantity: 3, 
+        unitPrice: "25", 
+        totalPrice: "75", 
+        comment: "Tempel & Museen"
+      },
+      { 
+        id: 6, 
+        category: "Transport", 
+        subcategory: "Öffentliche Verkehrsmittel", 
+        quantity: 7, 
+        unitPrice: "15", 
+        totalPrice: "105", 
+        comment: "JR Pass Tagestickets"
+      },
+    ],
+    totalBudget: 2500,
+  };
+
+  const demoReceipts = [
+    {
+      id: "r1",
+      itemName: "Flug nach Tokio",
+      total: 1200,
+      payer: "Anna",
+      persons: [
+        { name: "Anna", percent: 50, isPayer: true },
+        { name: "Ben", percent: 50, isPayer: false },
+      ],
+      debts: [{ from: "Ben", to: "Anna", amount: 600 }],
+    },
+    {
+      id: "r2",
+      itemName: "Hotel (7 Nächte)",
+      total: 840,
+      payer: "Ben",
+      persons: [
+        { name: "Anna", percent: 50, isPayer: false },
+        { name: "Ben", percent: 50, isPayer: true },
+      ],
+      debts: [{ from: "Anna", to: "Ben", amount: 420 }],
+    },
+    {
+      id: "r3",
+      itemName: "Gemeinsame Abendessen",
+      total: 210,
+      payer: "Anna",
+      persons: [
+        { name: "Anna", percent: 60, isPayer: true },
+        { name: "Ben", percent: 40, isPayer: false },
+      ],
+      debts: [{ from: "Ben", to: "Anna", amount: 84 }],
+    },
+  ];
+
+  const categoryColors = {
+    Transport: "bg-blue-500",
+    Hotel: "bg-purple-500", 
+    Verpflegung: "bg-green-500",
+    Aktivitäten: "bg-yellow-500",
+    Versicherung: "bg-red-500",
+    Sonstiges: "bg-slate-500"
+  };
+
+  const budgetSummary = {
+    totalBudget: demoTrip.totalBudget,
+    plannedBudget: demoTrip.budgetItems.reduce((sum, i) => sum + parseFloat(i.totalPrice), 0),
+    get percentage() {
+      return Math.round((this.plannedBudget / this.totalBudget) * 100);
+    },
+    get remaining() {
+      return this.totalBudget - this.plannedBudget;
+    }
+  };
+
+  const getCategoryTotal = (cat: string) => {
+    return demoTrip.budgetItems
+      .filter(i => i.category === cat)
+      .reduce((sum, i) => sum + parseFloat(i.totalPrice), 0);
+  };
 
   const handleGoogleSignIn = async () => {
     try {
@@ -126,6 +253,7 @@ export default function Landing() {
               </Button>
               <Button 
                 variant="outline"
+                onClick={() => setShowDemo(true)}
                 className="border-2 border-slate-200 text-slate-700 hover:bg-slate-50 px-8 py-4 text-lg font-semibold rounded-full transition-all duration-200"
               >
                 Demo ansehen
@@ -299,6 +427,207 @@ export default function Landing() {
           </Button>
         </div>
       </section>
+
+      {/* Demo Modal */}
+      {showDemo && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <Card className="w-full max-w-4xl border-0 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <CardHeader className="text-center border-b">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <CardTitle className="text-2xl font-bold text-slate-900">Demo: Tokio Abenteuer 2024</CardTitle>
+                  <CardDescription className="text-slate-600 mt-2">
+                    Erlebe die wichtigsten Funktionen live – keine Anmeldung nötig!
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowDemo(false)}
+                  className="h-8 w-8 p-0 text-slate-500 hover:text-slate-900"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <Tabs value={activeDemoTab} onValueChange={setActiveDemoTab} className="space-y-6">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-100">
+                  <TabsTrigger value="budget" className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4" />
+                    Budget-Management
+                  </TabsTrigger>
+                  <TabsTrigger value="costsharing" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Kostenteilung
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="budget" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>Budget-Übersicht</span>
+                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                          {budgetSummary.percentage}% verplant
+                        </Badge>
+                      </CardTitle>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-slate-600">Gesamtbudget:</span>
+                          <span className="font-bold text-lg text-slate-900">€{budgetSummary.totalBudget.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-slate-600">Geplante Ausgaben:</span>
+                          <span className="font-mono text-slate-900">€{budgetSummary.plannedBudget.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-slate-600">Verbleibendes Budget:</span>
+                          <span className={`font-mono ${budgetSummary.remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            €{budgetSummary.remaining.toLocaleString()}
+                          </span>
+                        </div>
+                        <Progress value={budgetSummary.percentage} className="h-3" />
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        {["Transport", "Hotel", "Verpflegung", "Aktivitäten"].map((cat) => (
+                          <div key={cat} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded-full ${categoryColors[cat]}`}></div>
+                              <span className="font-medium text-slate-700">{cat}</span>
+                            </div>
+                            <span className="font-mono text-slate-900">
+                              €{getCategoryTotal(cat).toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <h4 className="font-semibold text-slate-900 text-sm uppercase tracking-wide">Einzelne Budget-Posten</h4>
+                        <div className="space-y-2">
+                          {demoTrip.budgetItems.map((item) => (
+                            <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-3 h-3 rounded-full ${categoryColors[item.category]}`}></div>
+                                <div>
+                                  <div className="font-medium text-slate-900">{item.subcategory}</div>
+                                  {item.comment && (
+                                    <div className="text-xs text-slate-500 mt-1">{item.comment}</div>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-mono text-slate-900">
+                                  €{parseFloat(item.totalPrice).toLocaleString()}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {item.quantity} × €{parseFloat(item.unitPrice).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+
+                <TabsContent value="costsharing" className="space-y-6">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Kostenteilung-Beispiel</CardTitle>
+                      <CardDescription>
+                        So könnte die Abrechnung für eure Tokio-Reise aussehen
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {demoReceipts.map((receipt) => (
+                          <div key={receipt.id} className="border rounded-lg p-4 bg-slate-50 hover:bg-slate-100 transition-colors">
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-2">
+                                <Receipt className="h-4 w-4 text-slate-400" />
+                                <span className="font-semibold text-slate-900">{receipt.itemName}</span>
+                              </div>
+                              <span className="font-mono text-lg text-slate-900">€{receipt.total.toLocaleString()}</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <div className="text-slate-600 mb-1">
+                                  <span className="font-medium">Bezahlt von:</span> {receipt.payer}
+                                </div>
+                                <div className="text-slate-600">
+                                  <span className="font-medium">Beteiligte:</span>
+                                  <div className="mt-1">
+                                    {receipt.persons.map((p) => (
+                                      <div key={p.name} className="flex justify-between">
+                                        <span className={p.isPayer ? "font-semibold text-emerald-700" : ""}>
+                                          {p.name}
+                                        </span>
+                                        <span>{p.percent}%</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                <div className="text-slate-600">
+                                  <span className="font-medium">Schulden:</span>
+                                  <div className="mt-1 space-y-1">
+                                    {receipt.debts.map((debt, i) => (
+                                      <div key={i} className="flex justify-between text-sm">
+                                        <span>{debt.from} → {debt.to}:</span>
+                                        <span className="font-mono text-red-600">€{debt.amount.toLocaleString()}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border">
+                          <h4 className="font-semibold text-slate-900 mb-2">Netto-Abrechnung:</h4>
+                          <div className="text-sm text-slate-700">
+                            <div className="flex justify-between mb-1">
+                              <span>Ben schuldet Anna insgesamt:</span>
+                              <span className="font-mono text-red-600">€264</span>
+                            </div>
+                            <div className="text-xs text-slate-500 mt-2">
+                              (€600 - €420 + €84 = €264)
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
+              
+              <div className="mt-6 pt-6 border-t text-center">
+                <p className="text-slate-600 mb-4">
+                  Gefällt dir was du siehst? Starte jetzt kostenlos mit deiner eigenen Reiseplanung!
+                </p>
+                <Button 
+                  onClick={() => {
+                    setShowDemo(false);
+                    setShowAuth(true);
+                  }}
+                  className="bg-slate-900 text-white hover:bg-slate-800 px-8 py-3 rounded-full font-semibold"
+                >
+                  Jetzt kostenlos registrieren
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Auth Modal */}
       {showAuth && (
