@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
+import { supabase } from "@/lib/supabase";
 import { 
   User, 
   Camera, 
@@ -34,6 +35,9 @@ import PaymentMethodsTab from "@/components/PaymentMethodsTab";
 
 export default function Profile() {
   const { user, dbUser, signOut } = useAuth();
+  
+  // Check if user is signed in with Google
+  const isGoogleUser = user?.identities?.some(identity => identity.provider === 'google') || false;
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -214,11 +218,29 @@ export default function Profile() {
     },
   });
 
-  // Password change mutation
+  // Password change mutation using Supabase directly
   const changePasswordMutation = useMutation({
     mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
-      const response = await apiRequest("POST", "/api/auth/change-password", data);
-      return response.json();
+      // First verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user?.email || "",
+        password: data.currentPassword
+      });
+
+      if (signInError) {
+        throw new Error("Aktuelles Passwort ist falsch");
+      }
+
+      // Update password using Supabase client
+      const { error } = await supabase.auth.updateUser({
+        password: data.newPassword
+      });
+
+      if (error) {
+        throw new Error(error.message || "Passwort konnte nicht geändert werden");
+      }
+
+      return { message: "Passwort erfolgreich geändert" };
     },
     onSuccess: () => {
       toast({
@@ -510,7 +532,7 @@ export default function Profile() {
                        'Status wird geladen...'}
                     </p>
                     <p className="text-sm text-slate-500 mt-2">
-                      Reisen: {subscriptionData?.tripsUsed || 0} / {subscriptionData?.tripsLimit === Infinity ? '∞' : subscriptionData?.tripsLimit || 0}
+                      Reisen: {subscriptionData?.tripsUsed || 0} / {subscriptionData?.status === 'veteran' ? '∞' : subscriptionData?.tripsLimit || 0}
                     </p>
                   </div>
                   {subscriptionData?.status === 'free' && (
@@ -702,52 +724,70 @@ export default function Profile() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handlePasswordChange} className="space-y-4">
-                  <div>
-                    <Label htmlFor="current-password">Aktuelles Passwort</Label>
-                    <Input
-                      id="current-password"
-                      type="password"
-                      value={passwordData.currentPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="new-password">Neues Passwort</Label>
-                    <Input
-                      id="new-password"
-                      type="password"
-                      value={passwordData.newPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="confirm-password">Neues Passwort bestätigen</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      value={passwordData.confirmPassword}
-                      onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    disabled={changePasswordMutation.isPending}
-                    className="w-full md:w-auto"
-                  >
-                    {changePasswordMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Passwort wird geändert...
-                      </>
-                    ) : (
-                      "Passwort ändern"
-                    )}
-                  </Button>
-                </form>
+                {isGoogleUser ? (
+                  <Alert>
+                    <Lock className="h-4 w-4" />
+                    <AlertDescription>
+                      Du hast dich mit Google angemeldet. Dein Passwort wird über dein Google-Konto verwaltet. 
+                      Um dein Passwort zu ändern, besuche die{" "}
+                      <a 
+                        href="https://myaccount.google.com/security" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 underline"
+                      >
+                        Google-Kontosicherheit
+                      </a>.
+                    </AlertDescription>
+                  </Alert>
+                ) : (
+                  <form onSubmit={handlePasswordChange} className="space-y-4">
+                    <div>
+                      <Label htmlFor="current-password">Aktuelles Passwort</Label>
+                      <Input
+                        id="current-password"
+                        type="password"
+                        value={passwordData.currentPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="new-password">Neues Passwort</Label>
+                      <Input
+                        id="new-password"
+                        type="password"
+                        value={passwordData.newPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="confirm-password">Neues Passwort bestätigen</Label>
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        value={passwordData.confirmPassword}
+                        onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <Button 
+                      type="submit" 
+                      disabled={changePasswordMutation.isPending}
+                      className="w-full md:w-auto"
+                    >
+                      {changePasswordMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Passwort wird geändert...
+                        </>
+                      ) : (
+                        "Passwort ändern"
+                      )}
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -257,22 +257,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Use Supabase to change password
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword
-      });
-
-      if (error) {
-        console.error("🔴 Supabase password change error:", error);
+      // Check if user is a Google OAuth user (cannot change password)
+      const user = req.user;
+      const isGoogleUser = user.identities?.some((identity: any) => identity.provider === 'google');
+      
+      if (isGoogleUser) {
+        console.log(`🔴 User ${userId} is a Google user, cannot change password`);
         return res.status(400).json({ 
-          message: error.message || "Passwort konnte nicht geändert werden" 
+          message: "Passwort kann nicht geändert werden. Du hast dich mit Google angemeldet." 
         });
       }
 
-      console.log(`✅ Password changed successfully for user ${userId}`);
-      res.json({ message: "Passwort erfolgreich geändert" });
-    } catch (error) {
-      console.error("🔴 Error changing password:", error);
+      // First verify current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword
+      });
+
+      if (signInError) {
+        console.error("🔴 Current password verification failed:", signInError);
+        return res.status(400).json({ 
+          message: "Aktuelles Passwort ist falsch" 
+        });
+      }
+
+      // Since we can't use admin functions with anon key, we'll need the user to 
+      // change their password on the client side or implement proper service role key
+      // For now, return a helpful error message
+      console.log(`🔴 Password change not supported on server side with current setup`);
+      return res.status(400).json({ 
+        message: "Passwort-Änderung ist derzeit nur auf der Client-Seite möglich. Bitte verwende die Passwort-Zurücksetzen-Funktion." 
+      });
+    } catch (err) {
+      console.error("🔴 Error changing password:", err);
       res.status(500).json({ message: "Failed to change password" });
     }
   });
