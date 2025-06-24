@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { ClipboardCheck } from "lucide-react";
 import { useLocation } from "wouter";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,7 +22,7 @@ export default function Navigation() {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center space-x-4">
             <div className="flex items-center cursor-pointer" onClick={() => setLocation("/")}>
-              <MapPin className="h-8 w-8 text-primary mr-3" />
+              <ClipboardCheck className="h-8 w-8 text-primary mr-3" />
               <span className="text-xl font-bold text-slate-900">ReiseVeteran</span>
             </div>
             <div className="hidden md:flex space-x-6 ml-8">

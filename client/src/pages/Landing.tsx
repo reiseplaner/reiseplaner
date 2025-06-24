@@ -1,4 +1,4 @@
-import { MapPin, Wallet, Calendar, FileDown, ArrowRight, Check, Sparkles, Users, TrendingUp, Star, X, Receipt } from "lucide-react";
+import { ClipboardCheck, Wallet, Calendar, FileDown, ArrowRight, Check, Sparkles, Users, TrendingUp, Star, X, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -212,7 +212,7 @@ export default function Landing() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <MapPin className="h-7 w-7 text-slate-800 mr-3" />
+              <ClipboardCheck className="h-7 w-7 text-slate-800 mr-3" />
               <span className="text-xl font-semibold text-slate-900">ReiseVeteran</span>
             </div>
             <Button 
