@@ -1694,6 +1694,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Support route - only for Pro and Veteran users
+  app.post('/api/support', supabaseAuth, async (req: any, res) => {
+    try {
+      const userId = req.user.id;
+      
+      // Get user's subscription status
+      const subscriptionInfo = await storage.getUserSubscriptionStatus(userId);
+      
+      // Check if user is Pro or Veteran
+      if (!subscriptionInfo || subscriptionInfo.status === 'free') {
+        return res.status(403).json({ 
+          message: "Support ist nur für Pro- und Veteran-Nutzer verfügbar" 
+        });
+      }
+
+      const { subject, message, category } = req.body;
+      
+      if (!subject || !message) {
+        return res.status(400).json({ 
+          message: "Betreff und Nachricht sind erforderlich" 
+        });
+      }
+
+      // Get user info
+      const user = await storage.getUser(userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "Nutzer nicht gefunden" });
+      }
+
+      // For now, we'll store the support request in console
+      // You can later replace this with actual email sending using nodemailer
+      console.log('📧 Support-Anfrage erhalten:');
+      console.log(`Von: ${user.firstName} ${user.lastName} <${user.email}>`);
+      console.log(`Abo: ${subscriptionInfo.status.toUpperCase()}`);
+      console.log(`Kategorie: ${category || 'Allgemein'}`);
+      console.log(`Betreff: ${subject}`);
+      console.log(`Nachricht: ${message}`);
+      console.log('---');
+
+      // TODO: Implement actual email sending with nodemailer
+      // const transporter = nodemailer.createTransporter({ ... });
+      // await transporter.sendMail({ ... });
+
+      res.json({ 
+        success: true,
+        message: "Deine Anfrage wurde erfolgreich gesendet. Wir melden uns in Kürze bei dir!" 
+      });
+      
+    } catch (error) {
+      console.error("🔴 Error processing support request:", error);
+      res.status(500).json({ message: "Fehler beim Senden der Support-Anfrage" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

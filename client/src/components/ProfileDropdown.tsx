@@ -15,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
   User, 
-  Settings, 
   LogOut, 
   Crown,
   ChevronDown,
@@ -196,11 +195,6 @@ export default function ProfileDropdown() {
         <DropdownMenuItem onClick={handleProfileClick} className="cursor-pointer">
           <User className="mr-2 h-4 w-4" />
           <span>Mein Profil</span>
-        </DropdownMenuItem>
-        
-        <DropdownMenuItem className="cursor-pointer">
-          <Settings className="mr-2 h-4 w-4" />
-          <span>Einstellungen</span>
         </DropdownMenuItem>
         
         {subscriptionInfo?.status === 'free' && (

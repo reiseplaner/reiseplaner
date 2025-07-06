@@ -1,6 +1,7 @@
 import { ClipboardCheck } from "lucide-react";
 import { useLocation } from "wouter";
 import ProfileDropdown from "@/components/ProfileDropdown";
+import SupportDialog from "@/components/SupportDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 
@@ -50,6 +51,7 @@ export default function Navigation() {
           </div>
           
           <div className="flex items-center space-x-4">
+            <SupportDialog />
             <ProfileDropdown />
           </div>
         </div>

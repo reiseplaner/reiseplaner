@@ -25,13 +25,15 @@ import {
   Download,
   ExternalLink,
   Settings,
-  CreditCard
+  CreditCard,
+  MessageCircle
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useLocation } from "wouter";
 import PaymentMethodsTab from "@/components/PaymentMethodsTab";
+import SupportDialog from "@/components/SupportDialog";
 
 export default function Profile() {
   const { user, dbUser, signOut } = useAuth();
@@ -596,6 +598,29 @@ export default function Profile() {
                     )}
                   </ul>
                 </div>
+
+                {/* Support Section for Pro/Veteran users */}
+                {subscriptionData?.status !== 'free' && (
+                  <>
+                    <Separator className="my-6" />
+                    <div>
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4" />
+                        Premium Support
+                      </h4>
+                      <p className="text-sm text-slate-600 mb-4">
+                        Als {subscriptionData?.status === 'pro' ? 'Pro' : 'Veteran'}-Nutzer hast du Zugang zu unserem Premium Support. 
+                        Kontaktiere uns bei Fragen oder Problemen.
+                      </p>
+                      <SupportDialog>
+                        <Button variant="outline" className="flex items-center gap-2">
+                          <MessageCircle className="h-4 w-4" />
+                          Support kontaktieren
+                        </Button>
+                      </SupportDialog>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
