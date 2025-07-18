@@ -3,6 +3,8 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { supabaseAuth, supabase } from "./supabaseAuth";
+import { localAuth } from "./localAuth";
+import { registerLocalAuthRoutes } from "./localAuthRoutes";
 import {
   insertTripSchema,
   insertBudgetItemSchema,
@@ -50,6 +52,9 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Register local authentication routes
+  registerLocalAuthRoutes(app);
+  
   // Serve uploaded files
   app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 

@@ -2,12 +2,12 @@ import { ClipboardCheck } from "lucide-react";
 import { useLocation } from "wouter";
 import ProfileDropdown from "@/components/ProfileDropdown";
 import SupportDialog from "@/components/SupportDialog";
-import { useAuth } from "@/hooks/useAuth";
+import { useLocalAuth } from "@/hooks/useLocalAuth";
 import { Button } from "@/components/ui/button";
 
 export default function Navigation() {
   const [location, setLocation] = useLocation();
-  const { user, forceSignOut, isAuthenticated, isLoading } = useAuth();
+  const { user, forceSignOut, isAuthenticated, isLoading } = useLocalAuth();
 
   // Debug logging
   console.log('🔍 Navigation Debug:', { 
