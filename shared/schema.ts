@@ -21,7 +21,6 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().notNull(),
   email: varchar("email").unique(),
-  password: varchar("password"), // For local auth
   username: varchar("username").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),

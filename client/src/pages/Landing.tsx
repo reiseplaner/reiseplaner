@@ -6,13 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { useLocalAuth } from "@/hooks/useLocalAuth";
+import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import Footer from "@/components/Footer";
 
 export default function Landing() {
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, signInWithDemo } = useLocalAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -215,39 +215,12 @@ export default function Landing() {
               <ClipboardCheck className="h-7 w-7 text-slate-800 mr-3" />
               <span className="text-xl font-semibold text-slate-900">ReiseVeteran</span>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button 
-                onClick={async () => {
-                  try {
-                    setIsLoading(true);
-                    await signInWithDemo();
-                    toast({
-                      title: "Demo-Login erfolgreich!",
-                      description: "Willkommen bei ReiseVeteran Demo.",
-                    });
-                  } catch (error) {
-                    toast({
-                      title: "Demo-Login fehlgeschlagen",
-                      description: "Es gab ein Problem. Bitte versuche es erneut.",
-                      variant: "destructive",
-                    });
-                  } finally {
-                    setIsLoading(false);
-                  }
-                }}
-                disabled={isLoading}
-                variant="outline"
-                className="px-4 py-2 rounded-full font-medium transition-all duration-200"
-              >
-                {isLoading ? "Wird geladen..." : "Demo testen"}
-              </Button>
-              <Button 
-                onClick={() => setShowAuth(true)} 
-                className="bg-slate-900 text-white hover:bg-slate-800 px-6 py-2 rounded-full font-medium transition-all duration-200"
-              >
-                Anmelden
-              </Button>
-            </div>
+            <Button 
+              onClick={() => setShowAuth(true)} 
+              className="bg-slate-900 text-white hover:bg-slate-800 px-6 py-2 rounded-full font-medium transition-all duration-200"
+            >
+              Anmelden
+            </Button>
           </div>
         </div>
       </nav>

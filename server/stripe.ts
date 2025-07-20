@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 
-// Directly set the Stripe secret key for testing
-const STRIPE_SECRET_KEY = 'sk_test_51Rb56HJxk5EsZYTy9ZpWIcfzyZS8sRj96ac7OolTXM3FJq3nhFlYfhpT615OCDwoqe7Gin27gJzxmzEsJSWn4CbP00dAJY6v2c';
+// Use environment variable with fallback to current test key
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_51Rb56HJxk5EsZYTy9ZpWIcfzyZS8sRj96ac7OolTXM3FJq3nhFlYfhpT615OCDwoqe7Gin27gJzxmzEsJSWn4CbP00dAJY6v2c';
 
 if (!STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY is required');

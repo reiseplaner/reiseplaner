@@ -114,7 +114,25 @@ export default function ProfileDropdown() {
     setIsOpen(false);
   };
 
+  // Enhanced debugging
+  console.log('🔍 ProfileDropdown Debug:', {
+    user: !!user,
+    userEmail: user?.email,
+    dbUser: !!dbUser,
+    dbUserDetails: dbUser ? {
+      id: dbUser.id,
+      email: dbUser.email,
+      firstName: dbUser.firstName,
+      lastName: dbUser.lastName,
+      username: dbUser.username
+    } : null
+  });
+
   if (!user || !dbUser) {
+    console.log('🔍 ProfileDropdown: Not rendering because user or dbUser is missing', {
+      hasUser: !!user,
+      hasDbUser: !!dbUser
+    });
     return null;
   }
 

@@ -3,7 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useLocalAuth } from "@/hooks/useLocalAuth";
+import { useAuth } from "@/hooks/useAuth";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import TripPlanning from "@/pages/TripPlanning";
@@ -21,7 +21,7 @@ import CookieBanner from "@/components/CookieBanner";
 import { useState } from "react";
 
 function Router() {
-  const { isAuthenticated, isLoading, needsUsername } = useLocalAuth();
+  const { isAuthenticated, isLoading, needsUsername } = useAuth();
   const [usernameSetupCompleted, setUsernameSetupCompleted] = useState(false);
 
   console.log('🔍 Router State:', { isAuthenticated, isLoading, needsUsername, usernameSetupCompleted });

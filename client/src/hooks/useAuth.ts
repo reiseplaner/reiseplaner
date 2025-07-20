@@ -23,20 +23,33 @@ export function useAuth() {
   const { data: dbUser, isLoading: isLoadingDbUser, error: dbUserError } = useQuery<DbUser>({
     queryKey: ['/api/auth/user'],
     queryFn: async () => {
+      console.log('🔍 useAuth: Starting database user fetch...');
       try {
         const response = await apiRequest("GET", "/api/auth/user");
+        console.log('🔍 useAuth: API response status:', response.status);
+        console.log('🔍 useAuth: API response headers:', response.headers);
+        
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          console.error('🔴 useAuth: API response not ok:', response.status, response.statusText);
+          const text = await response.text();
+          console.error('🔴 useAuth: Error response body:', text);
+          throw new Error(`HTTP ${response.status}: ${text}`);
         }
-        return response.json();
+        
+        const userData = await response.json();
+        console.log('🔍 useAuth: Received user data:', userData);
+        return userData;
       } catch (error) {
-        console.error('Failed to fetch database user:', error);
+        console.error('🔴 useAuth: Failed to fetch database user:', error);
         // Return null instead of throwing to prevent endless loading
         return null;
       }
     },
     enabled: !!user,
-    retry: 1, // Only retry once
+    retry: (failureCount, error) => {
+      console.log(`🔄 useAuth: Retry attempt ${failureCount}, error:`, error);
+      return failureCount < 3; // Retry up to 3 times
+    },
     staleTime: 5 * 60 * 1000, // 5 minutes
     // Add timeout to prevent endless loading
     refetchOnWindowFocus: false,
