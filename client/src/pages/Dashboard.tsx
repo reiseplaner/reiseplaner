@@ -1,0 +1,319 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Plus, Compass, LogOut, Plane, Mountain, Building, Users } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import Navigation from "@/components/Navigation";
+import TripCard from "@/components/TripCard";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import Footer from "@/components/Footer";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import type { Trip } from "@shared/schema";
+import { useState } from "react";
+
+export default function Dashboard() {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { forceSignOut, isAuthenticated, user } = useAuth();
+  const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+
+  // Simple reset function that clears everything and redirects
+  const handleEmergencyReset = () => {
+    console.log('🚨 Emergency reset triggered');
+    
+    // Show confirmation
+    if (!confirm('Möchten Sie wirklich alle Authentifizierungsdaten zurücksetzen und zur Anmeldeseite wechseln?')) {
+      return;
+    }
+    
+    try {
+      // Clear all local and session storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Clear query cache
+      queryClient.clear();
+      
+      // Force a complete page reload to reset all state
+      window.location.replace('/');
+    } catch (error) {
+      console.error('Error during reset:', error);
+      // Fallback: just reload the page
+      window.location.reload();
+    }
+  };
+
+  const { data: trips = [], isLoading: tripsLoading } = useQuery<Trip[]>({
+    queryKey: ["/api/trips"],
+  });
+
+  const { data: publicTrips = [] } = useQuery<Trip[]>({
+    queryKey: ["/api/public/trips"],
+    retry: false,
+  });
+
+  const { data: subscriptionInfo } = useQuery<{
+    status: 'free' | 'pro' | 'veteran';
+    tripsUsed: number;
+    tripsLimit: number;
+    canExport: boolean;
+  }>({
+    queryKey: ["/api/user/subscription"],
+    retry: false,
+    staleTime: 0, // Always consider data stale
+    refetchOnWindowFocus: true, // Refetch when window gains focus
+    refetchOnMount: true, // Always refetch on mount
+  });
+
+  const createTripMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/trips", {
+        name: "Neue Reise",
+        totalBudget: "1000",
+        travelers: 2,
+      });
+      return response.json();
+    },
+    onSuccess: (newTrip) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/subscription"] });
+      setLocation(`/trip-planning/${newTrip.id}`);
+      toast({
+        title: "Reise erstellt",
+        description: "Deine neue Reise wurde erfolgreich erstellt.",
+      });
+    },
+    onError: (error: any) => {
+      console.error('Trip creation error:', error);
+      
+      // Check if it's a limit reached error
+      if (error.message?.includes('403') || error.message?.includes('Limit')) {
+        setShowUpgradePrompt(true);
+      } else {
+        toast({
+          title: "Fehler",
+          description: "Die Reise konnte nicht erstellt werden.",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const copyTripMutation = useMutation({
+    mutationFn: async (publicTrip: Trip) => {
+      const response = await apiRequest("POST", "/api/trips", {
+        name: `${publicTrip.name} (Kopie)`,
+        departure: publicTrip.departure,
+        destination: publicTrip.destination,
+        totalBudget: publicTrip.totalBudget,
+        travelers: publicTrip.travelers,
+        description: publicTrip.description,
+      });
+      return response.json();
+    },
+    onSuccess: (newTrip) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
+      setLocation(`/trip-planning/${newTrip.id}`);
+      toast({
+        title: "Reise kopiert",
+        description: "Die Reise wurde erfolgreich zu deinem Account hinzugefügt.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Fehler",
+        description: "Die Reise konnte nicht kopiert werden.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (tripsLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50">
+        <Navigation />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="animate-pulse">
+            <div className="h-8 bg-slate-200 rounded w-1/4 mb-2"></div>
+            <div className="h-4 bg-slate-200 rounded w-1/3 mb-8"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="bg-white rounded-xl p-6 space-y-4">
+                  <div className="h-32 bg-slate-200 rounded-lg"></div>
+                  <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                  <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Navigation />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dashboard Header */}
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Meine Reisen</h1>
+            <p className="text-slate-600 mt-1">
+              Verwalte und plane deine Reisen
+            </p>
+          </div>
+          <Button 
+            onClick={() => createTripMutation.mutate()}
+            disabled={createTripMutation.isPending}
+            className="bg-primary text-white hover:bg-primary/90"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Neue Reise starten
+          </Button>
+        </div>
+
+        {/* Trip Cards */}
+        {trips.length === 0 ? (
+          <Card className="mb-12">
+            <CardContent className="py-12 text-center">
+              <div className="text-slate-400 mb-4">
+                <Plus className="h-16 w-16 mx-auto" />
+              </div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                Noch keine Reisen geplant
+              </h3>
+              <p className="text-slate-600 mb-6">
+                Erstelle deine erste Reise und beginne mit der Planung.
+              </p>
+              <Button 
+                onClick={() => createTripMutation.mutate()}
+                disabled={createTripMutation.isPending}
+                className="bg-primary text-white hover:bg-primary/90"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Erste Reise erstellen
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {trips.map((trip) => (
+              <TripCard key={trip.id} trip={trip} />
+            ))}
+          </div>
+        )}
+
+        {/* Community Inspiration */}
+        {publicTrips.length > 0 && (
+          <Card>
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 flex items-center">
+                    <Compass className="h-6 w-6 mr-3 text-primary" />
+                    Inspiration aus der Community
+                  </h2>
+                  <p className="text-slate-600 mt-1">Entdecke Reisepläne anderer Nutzer</p>
+                </div>
+                <Button 
+                  variant="ghost"
+                  onClick={() => setLocation("/community")}
+                  className="text-primary hover:text-primary/90"
+                >
+                  Alle ansehen →
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {publicTrips.slice(0, 3).map((trip) => {
+                  const getDestinationIcon = (destination: string) => {
+                    const destinationMap: { [key: string]: any } = {
+                      "DPS": Mountain, // Bali
+                      "NRT": Mountain, // Japan
+                      "KEF": Mountain, // Iceland
+                      "ATH": Building, // Greece
+                      "CDG": Building, // Paris
+                      "NYC": Building, // New York
+                      "LON": Building, // London
+                      "ROM": Building, // Rom
+                      "BCN": Building, // Barcelona
+                      "AMS": Building, // Amsterdam
+                    };
+                    return destinationMap[destination || ""] || Plane;
+                  };
+
+                  const IconComponent = getDestinationIcon(trip.destination || "");
+
+                  return (
+                    <div 
+                      key={trip.id} 
+                      className="group border border-slate-200 rounded-lg p-4 hover:shadow-lg hover:scale-[1.02] transition-all duration-300 bg-white/80 backdrop-blur-sm cursor-pointer"
+                      onClick={() => setLocation(`/community`)}
+                    >
+                      {/* Header mit Icon */}
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className="p-2 bg-slate-100 rounded-lg">
+                          <IconComponent className="h-5 w-5 text-gray-700" />
+                        </div>
+                        {trip.destination && (
+                          <div className="text-gray-700 font-medium bg-slate-100 px-2 py-1 rounded-full text-xs">
+                            {trip.destination}
+                          </div>
+                        )}
+                      </div>
+
+                      <h4 className="font-semibold text-slate-900 mb-2 group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-blue-600 group-hover:bg-clip-text transition-all duration-300">
+                        {trip.name}
+                      </h4>
+                      
+                      <div className="flex items-center space-x-2 mb-3">
+                        <div className="p-1 bg-purple-100 rounded">
+                          <Users className="h-3 w-3 text-purple-600" />
+                        </div>
+                        <span className="text-sm text-slate-600">{trip.travelers} Personen</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center text-xs pt-3 border-t border-gray-100">
+                        <span className="text-slate-500 bg-slate-50 px-2 py-1 rounded-full">Öffentlicher Plan</span>
+                        <Button 
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyTripMutation.mutate(trip);
+                          }}
+                          disabled={copyTripMutation.isPending}
+                          className="text-primary hover:text-primary/90"
+                        >
+                          Kopieren
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Upgrade Prompt */}
+      {subscriptionInfo && (
+        <UpgradePrompt
+          isOpen={showUpgradePrompt}
+          onClose={() => setShowUpgradePrompt(false)}
+          currentPlan={subscriptionInfo.status}
+          tripsUsed={subscriptionInfo.tripsUsed}
+          tripsLimit={subscriptionInfo.tripsLimit}
+        />
+      )}
+      
+      {/* Footer */}
+      <Footer />
+    </div>
+  );
+}
