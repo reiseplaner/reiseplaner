@@ -16,7 +16,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
 ### 💳 STRIPE (TEST KEYS ZUERST)
 ```
-STRIPE_SECRET_KEY=sk_test_51Rb56HJxk5EsZYTy9ZpWIcfzyZS8sRj96ac7OolTXM3FJq3nhFlYfhpT615OCDwoqe7Gin27gJzxmzEsJSWn4CbP00dAJY6v2c
+STRIPE_SECRET_KEY=sk_test_YOUR_TEST_KEY_HERE
 STRIPE_WEBHOOK_SECRET=whsec_your_webhook_secret_here
 ```
 
