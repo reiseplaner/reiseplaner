@@ -431,23 +431,14 @@ export class DatabaseStorage implements IStorage {
         content: tripComments.content,
         createdAt: tripComments.createdAt,
         updatedAt: tripComments.updatedAt,
-        user: {
-          id: users.id,
-          email: users.email,
-          username: users.username,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          profileImageUrl: users.profileImageUrl,
-          createdAt: users.createdAt,
-          updatedAt: users.updatedAt,
-        },
+        user: users,
       })
       .from(tripComments)
       .innerJoin(users, eq(tripComments.userId, users.id))
       .where(eq(tripComments.tripId, tripId))
       .orderBy(desc(tripComments.createdAt));
 
-    return comments;
+    return comments as (TripComment & { user: User })[];
   }
 
   async deleteTripComment(commentId: number, userId: string): Promise<boolean> {

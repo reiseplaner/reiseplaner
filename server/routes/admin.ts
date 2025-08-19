@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { DatabaseStorage } from '../storage/DatabaseStorage.js';
+import { DatabaseStorage } from '../storage';
+import type { User } from '../../shared/schema';
 
 const router = Router();
 const storage = new DatabaseStorage();
@@ -15,7 +16,7 @@ router.post('/update-subscription', async (req, res) => {
     
     // Find user by email
     const users = await storage.getAllUsers();
-    const user = users.find(u => u.email === email);
+    const user = users.find((u: User) => u.email === email);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

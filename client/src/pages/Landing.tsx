@@ -19,6 +19,9 @@ export default function Landing() {
   const [showDemo, setShowDemo] = useState(false);
   const [activeDemoTab, setActiveDemoTab] = useState("budget");
 
+  // Test: Einfacher Text um zu sehen ob Rendering funktioniert
+  console.log('🔍 Landing component rendering...');
+
   // Demo-Daten
   const demoTrip = {
     budgetItems: [

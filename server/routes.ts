@@ -2,6 +2,7 @@ import type { Express } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import type Stripe from "stripe";
 import { supabaseAuth, supabase } from "./supabaseAuth";
 import {
   insertTripSchema,
@@ -1290,12 +1291,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Stripe customer if not exists
       if (!customerId) {
         console.log('🔧 Creating new Stripe customer for user:', userId);
-        const customer = await stripe.customers.create({
+        const customerCreateParams: Stripe.CustomerCreateParams = {
           email: user.email || undefined,
-          metadata: {
-            userId: userId,
-          },
-        });
+          metadata: { userId },
+        };
+        const customer = await stripe.customers.create(customerCreateParams);
         customerId = customer.id;
 
         // Update user with Stripe customer ID
@@ -1650,13 +1650,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create Stripe customer if one doesn't exist
       if (!stripeCustomerId) {
         console.log(`🔧 Creating Stripe customer for user ${userId}`);
-        const customer = await stripe.customers.create({
-          email: user.email,
+        const customerCreateParams2: Stripe.CustomerCreateParams = {
+          email: user.email || undefined,
           name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || undefined,
-          metadata: {
-            userId: userId,
-          },
-        });
+          metadata: { userId },
+        };
+        const customer = await stripe.customers.create(customerCreateParams2);
         
         stripeCustomerId = customer.id;
         
@@ -1680,11 +1679,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       res.json({ url: portalSession.url });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('🔴 Error creating billing portal session:', error);
       
       // Check for specific Stripe errors
-      if (error.message?.includes('No configuration provided')) {
+      if ((error as any).message?.includes('No configuration provided')) {
         return res.status(400).json({ 
           message: 'Das Stripe Customer Portal muss zuerst im Stripe Dashboard konfiguriert werden. Gehe zu https://dashboard.stripe.com/settings/billing/portal und konfiguriere das Portal.' 
         });

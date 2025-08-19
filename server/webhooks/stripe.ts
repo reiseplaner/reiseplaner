@@ -5,13 +5,12 @@ import { storage } from '../storage';
 export const handleStripeWebhook = async (req: Request, res: Response) => {
   const sig = req.headers['stripe-signature'];
   
-  // For testing, we'll temporarily disable webhook signature verification
-  // In production, you MUST enable this!
-  const STRIPE_WEBHOOK_SECRET = 'whsec_test_your_webhook_secret_here'; // Replace with actual secret
+  // Get webhook secret from environment variables
+  const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   
   let event;
 
-  if (sig && STRIPE_WEBHOOK_SECRET && STRIPE_WEBHOOK_SECRET !== 'whsec_test_your_webhook_secret_here') {
+  if (sig && STRIPE_WEBHOOK_SECRET) {
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
     } catch (err: any) {
