@@ -8,8 +8,15 @@ declare module 'express-serve-static-core' {
   }
 }
 
-const supabaseUrl = 'https://ycfbegvjeviovbglbrdy.supabase.co'
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljZmJlZ3ZqZXZpb3ZiZ2xicmR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NjUyOTEsImV4cCI6MjA2NDA0MTI5MX0.vpTfW9Z2k6uwZRk-bI7pBD-V-rAA6uwnl53mscDqa7c'
+const supabaseUrl = process.env.SUPABASE_URL || 'https://ycfbegvjeviovbglbrdy.supabase.co'
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljZmJlZ3ZqZXZpb3ZiZ2xicmR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg0NjUyOTEsImV4cCI6MjA2NDA0MTI5MX0.vpTfW9Z2k6uwZRk-bI7pBD-V-rAA6uwnl53mscDqa7c'
+
+console.log('🔧 Supabase config:', {
+  url: supabaseUrl,
+  anonKeyLength: supabaseAnonKey?.length || 0,
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey
+});
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
@@ -23,7 +30,13 @@ export const supabaseAuth: RequestHandler = async (req, res, next) => {
     const token = authHeader.substring(7)
     const { data: { user }, error } = await supabase.auth.getUser(token)
     
-    if (error || !user) {
+    if (error) {
+      console.error('🔴 Supabase getUser error:', error)
+      return res.status(401).json({ message: 'Unauthorized', error: error.message })
+    }
+    
+    if (!user) {
+      console.error('🔴 No user returned from Supabase')
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
