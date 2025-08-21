@@ -240,7 +240,136 @@ export default {
     "visible", "invisible", "opacity-0", "opacity-25", "opacity-50", "opacity-75", "opacity-100",
     
     // CLAMP (für Textzeilen)
-    "line-clamp-1", "line-clamp-2", "line-clamp-3", "line-clamp-4", "line-clamp-5", "line-clamp-6"
+    "line-clamp-1", "line-clamp-2", "line-clamp-3", "line-clamp-4", "line-clamp-5", "line-clamp-6",
+    
+    // ============ TAB-HIGHLIGHTING FIX ============
+    // Radix UI Data-Attribute Selektoren (müssen explizit in safelist stehen!)
+    { pattern: /data-\[state=(active|inactive)\]:(bg|text|shadow)-.+/ },
+    
+    // Tab-spezifische Klassen - ALLE Variationen
+    "ring-offset-background", "focus-visible:ring-ring", "focus-visible:ring-offset-2",
+    "whitespace-nowrap", "rounded-sm", "font-medium", "transition-all",
+    "focus-visible:outline-none", "disabled:pointer-events-none", "disabled:opacity-50",
+    
+    // Grid für Tab-Listen
+    "grid-cols-2", "grid-cols-3", "grid-cols-4", "grid-cols-5", "grid-cols-6", "grid-cols-7", "grid-cols-8",
+    
+    // Muted colors für inaktive Tabs
+    "bg-muted", "text-muted-foreground", "text-foreground",
+    
+    // Tab-Container Styles
+    "inline-flex", "items-center", "justify-center", "rounded-md", "p-1", "h-10",
+    
+    // EXPLIZITE TAB ACTIVE/INACTIVE STYLES (falls data-attribute patterns nicht funktionieren)
+    "bg-background", "bg-transparent", "shadow-sm",
+    
+    // Zusätzliche Tab-States die möglicherweise verwendet werden
+    { pattern: /data-\[.*\]:(bg|text|border|shadow)-.+/ },
+    
+    // ============ LANDING PAGE KLASSEN - VOLLSTÄNDIG ============
+    // ALLE Klassen aus der Landing Page explizit aufgelistet
+    
+    // Hero Section - Typography Größen
+    "text-5xl", "text-7xl", "md:text-7xl", "leading-tight",
+    
+    // Navigation
+    "bg-white/80", "backdrop-blur-lg", "border-b", "border-slate-100", "h-16",
+    "h-7", "w-7", "text-slate-800", "mr-3", "text-xl", "font-semibold", "text-slate-900",
+    
+    // Hero Buttons
+    "px-6", "py-2", "rounded-full", "font-medium", "transition-all", "duration-200",
+    "px-8", "py-4", "text-lg", "font-semibold", "gap-2",
+    
+    // Hero Gradient & Badge
+    "bg-gradient-to-r", "from-slate-900", "to-slate-600", "bg-clip-text", "text-transparent", "block",
+    "inline-flex", "items-center", "gap-2", "px-4", "py-2", "text-sm", "mb-8",
+    
+    // Hero Section Layout
+    "pt-20", "pb-16", "text-center", "mb-16", "mb-6", "mb-12",
+    "text-xl", "text-slate-600", "leading-relaxed",
+    "sm:flex-row", "gap-4",
+    
+    // Browser Mockup
+    "max-w-4xl", "bg-gradient-to-br", "from-slate-50", "to-slate-100", "rounded-3xl", "p-8", "shadow-xl",
+    "bg-white", "rounded-2xl", "p-6", "shadow-lg", "gap-3", "mb-6",
+    "w-3", "h-3", "bg-red-500", "bg-yellow-500", "bg-green-500", "rounded-full",
+    "ml-4", "rounded-lg", "font-mono",
+    
+    // Stats Grid
+    "grid-cols-3", "gap-4", "space-y-4",
+    "text-lg", "font-semibold", "bg-green-100", "text-green-800", "px-3", "py-1", "text-sm",
+    "bg-slate-50", "p-4", "rounded-xl", "mb-1", "text-2xl", "font-bold",
+    
+    // Mockup Badge
+    "-top-6", "-right-6", "rounded-2xl", "border", "border-slate-200",
+    "h-5", "w-5", "text-yellow-500", "fill-yellow-500",
+    
+    // Features Section
+    "py-20", "bg-slate-50", "text-4xl", "mb-4", "max-w-2xl",
+    "md:grid-cols-3", "gap-8", "border-0", "hover:shadow-xl", "duration-300", "bg-white",
+    "text-center", "pb-4", "rounded-2xl", "flex", "items-center", "justify-center", "mx-auto", "mb-4",
+    "h-7", "w-7", "text-white",
+    
+    // Social Proof
+    "py-20", "bg-white", "md:grid-cols-3", "mb-16",
+    "text-4xl", "font-bold", "text-slate-900", "mb-2", "text-slate-600",
+    "rounded-3xl", "p-12", "text-center", "justify-center", "mb-6",
+    "h-6", "w-6", "text-yellow-500", "fill-yellow-500",
+    "text-xl", "text-slate-700", "mb-6", "max-w-3xl", "mx-auto", "leading-relaxed",
+    "font-semibold",
+    
+    // CTA Section
+    "py-20", "bg-slate-900", "text-center", "text-4xl", "font-bold", "text-white", "mb-6",
+    "text-xl", "text-slate-300", "mb-12", "max-w-2xl", "mx-auto",
+    "bg-white", "text-slate-900", "hover:bg-slate-100", "px-12", "py-4", "text-lg", "font-semibold", "rounded-full", "transition-all", "duration-200",
+    
+    // Modal/Dialog
+    "fixed", "inset-0", "bg-black/50", "backdrop-blur-sm", "flex", "items-center", "justify-center", "p-4", "z-50",
+    "w-full", "max-w-4xl", "border-0", "shadow-2xl", "max-h-[90vh]", "overflow-y-auto",
+    "text-center", "border-b", "justify-between", "items-center", "mb-4",
+    "text-2xl", "font-bold", "text-slate-900", "text-slate-600", "mt-2",
+    "variant", "ghost", "size", "sm", "h-8", "w-8", "p-0", "text-slate-500", "hover:text-slate-900",
+    "h-4", "w-4", "p-6", "space-y-6", "bg-slate-100", "grid", "w-full", "grid-cols-2",
+    
+    // Demo Content
+    "space-y-6", "flex", "items-center", "gap-2", "justify-between", "variant", "secondary",
+    "bg-green-100", "text-green-800", "space-y-3", "text-sm", "font-bold", "text-lg",
+    "font-mono", "text-green-600", "text-red-600", "h-3", "grid-cols-1", "md:grid-cols-2", "gap-4", "mb-6",
+    "p-3", "bg-slate-50", "rounded-lg", "gap-3", "w-4", "h-4", "rounded-full", "font-medium", "text-slate-700",
+    "space-y-3", "uppercase", "tracking-wide", "space-y-2", "border", "rounded-lg", "hover:bg-slate-50", "transition-colors",
+    "text-right", "text-xs", "text-slate-500", "mt-1", "text-slate-400", "items-center", "gap-2",
+    "font-semibold", "text-slate-900", "font-mono", "text-lg", "text-slate-900", "gap-4", "mb-1",
+    "font-medium", "mt-1", "justify-between", "text-sm", "font-mono", "text-red-600", "mt-6", "p-4",
+    "bg-gradient-to-r", "from-blue-50", "to-purple-50", "rounded-lg", "border", "mb-2", "text-slate-700",
+    "flex", "justify-between", "mb-1", "font-mono", "text-red-600", "text-xs", "text-slate-500", "mt-2",
+    "mt-6", "pt-6", "border-t", "text-center", "text-slate-600", "mb-4", "px-8", "py-3", "rounded-full", "font-semibold",
+    
+    // Auth Modal
+    "max-w-md", "shadow-2xl", "text-center", "text-2xl", "font-bold", "text-slate-900", "h-8", "w-8", "p-0",
+    "text-slate-500", "hover:text-slate-900", "text-slate-600", "space-y-6", "grid", "w-full", "grid-cols-2",
+    "bg-slate-100", "font-medium", "space-y-4", "space-y-2", "text-slate-700", "font-medium", "border-slate-200",
+    "focus:border-slate-400", "rounded-lg", "w-full", "bg-slate-900", "hover:bg-slate-800", "rounded-lg", "py-3",
+    "font-medium", "relative", "absolute", "inset-0", "flex", "items-center", "w-full", "border-t", "border-slate-200",
+    "relative", "flex", "justify-center", "text-xs", "uppercase", "bg-white", "px-2", "text-slate-500", "font-medium",
+    "variant", "outline", "w-full", "border-slate-200", "hover:bg-slate-50", "rounded-lg", "py-3", "font-medium",
+    "minLength", "text-xs", "space-y-1", "font-mono", "text-red-600",
+    
+    // Zusätzliche Responsive Klassen
+    "sm:px-6", "lg:px-8", "sm:flex-row",
+    
+    // ALLE h/w Werte aus Landing Page
+    "h-16", "h-7", "w-7", "h-4", "w-4", "h-5", "w-5", "h-6", "w-6", "w-3", "h-3", "w-14", "h-14",
+    
+    // ALLE Spacing aus Landing Page
+    "px-4", "px-6", "px-8", "px-12", "py-2", "py-4", "py-6", "py-8", "py-12", "py-20",
+    "pt-20", "pb-16", "mb-2", "mb-4", "mb-6", "mb-8", "mb-12", "mb-16", "mt-1", "mt-2", "mt-6",
+    "mr-3", "ml-4", "gap-2", "gap-3", "gap-4", "gap-6", "gap-8", "space-y-2", "space-y-3", "space-y-4", "space-y-6",
+    
+    // ALLE Positionierung aus Landing Page
+    "-top-6", "-right-6", "-top-3", "-right-1", "-right-2", "-right-3", "top-0", "left-1/2", "transform", "-translate-x-1/2",
+    
+    // Max Height Klassen
+    "max-h-[90vh]"
   ],
 
   theme: {

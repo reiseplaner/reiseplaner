@@ -171,9 +171,10 @@ export default function Dashboard() {
           <Button 
             onClick={() => createTripMutation.mutate()}
             disabled={createTripMutation.isPending}
-            className="bg-primary text-white hover:bg-primary/90"
+            className="bg-primary hover:bg-primary/90"
+            style={{ color: 'white' }}
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-2" style={{ color: 'white' }} />
             Neue Reise starten
           </Button>
         </div>
@@ -194,9 +195,10 @@ export default function Dashboard() {
               <Button 
                 onClick={() => createTripMutation.mutate()}
                 disabled={createTripMutation.isPending}
-                className="bg-primary text-white hover:bg-primary/90"
+                className="bg-primary hover:bg-primary/90"
+                style={{ color: 'white' }}
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 mr-2" style={{ color: 'white' }} />
                 Erste Reise erstellen
               </Button>
             </CardContent>

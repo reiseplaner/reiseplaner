@@ -857,7 +857,7 @@ export default function BudgetOverview({ trip }: BudgetOverviewProps) {
                               <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Unterkategorie wählen" />
                               </SelectTrigger>
-                              <SelectContent>
+                              <SelectContent className="bg-white border border-slate-200 shadow-lg backdrop-blur-md bg-white/95">
                                 {subcategoryOptions[category as keyof typeof subcategoryOptions]?.map((option) => (
                                   <SelectItem key={option} value={option}>
                                     {option}

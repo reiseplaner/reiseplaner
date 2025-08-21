@@ -333,20 +333,24 @@ export default function TripPlanning() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button
-              className="bg-emerald-600 text-white hover:bg-emerald-700 relative flex items-center"
-              onClick={() => setShowShareDialog(true)}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Mit Community teilen
-              <span className="ml-2 px-2 py-0.5 rounded-full bg-white text-emerald-700 text-xs font-bold absolute -top-2 -right-4 border border-emerald-200 shadow-sm">Tipp</span>
-            </Button>
+            <div className="relative">
+              <Button
+                className="bg-emerald-600 hover:bg-emerald-700 flex items-center pr-8"
+                onClick={() => setShowShareDialog(true)}
+                style={{ color: 'white' }}
+              >
+                <Users className="h-4 w-4 mr-2" style={{ color: 'white' }} />
+                Mit Community teilen
+              </Button>
+              <span className="px-2 py-1 rounded-full bg-orange-500 text-white text-xs font-bold absolute -top-2 -right-2 border-2 border-white shadow-lg z-20">Tipp</span>
+            </div>
             <Button
               onClick={form.handleSubmit(onSubmit)}
               disabled={updateTripMutation.isPending}
-              className="bg-primary text-white hover:bg-primary/90"
+              className="bg-primary hover:bg-primary/90"
+              style={{ color: 'white' }}
             >
-              <Save className="h-4 w-4 mr-2" />
+              <Save className="h-4 w-4 mr-2" style={{ color: 'white' }} />
               Speichern
             </Button>
           </div>
