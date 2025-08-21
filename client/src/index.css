@@ -102,4 +102,310 @@
     margin: 0 !important;
     min-height: 2rem !important;
   }
+  
+  /* LANDING PAGE STYLING - NUR FÜR LANDING PAGE (.landing-page Klasse) */
+  
+  /* Navigation - NUR für Landing Page */
+  .landing-page nav {
+    background-color: white !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 50 !important;
+  }
+  
+  .landing-page nav .max-w-6xl {
+    max-width: 72rem !important;
+    margin: 0 auto !important;
+    padding: 0 1rem !important;
+  }
+  
+  /* Landing Page Navigation Layout */
+  .landing-page nav .flex.justify-between {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    height: 4rem !important;
+  }
+  
+  /* Logo - nur Landing Page */
+  .landing-page nav .flex.items-center span {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+  }
+  
+  .landing-page nav .flex.items-center svg {
+    height: 1.75rem !important;
+    width: 1.75rem !important;
+    color: #0f172a !important;
+    margin-right: 0.75rem !important;
+  }
+  
+  /* Hero Section - nur Landing Page */
+  .landing-page section.pt-20 {
+    padding-top: 5rem !important;
+    padding-bottom: 4rem !important;
+    background-color: white !important;
+  }
+  
+  .landing-page section .max-w-6xl {
+    max-width: 72rem !important;
+    margin: 0 auto !important;
+    padding: 0 1rem !important;
+  }
+  
+  /* Badge */
+  .inline-flex.items-center.gap-2.bg-slate-100 {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 9999px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    margin-bottom: 2rem !important;
+  }
+  
+  /* Main Heading */
+  h1.text-5xl {
+    font-size: 3.5rem !important;
+    font-weight: 700 !important;
+    color: #0f172a !important;
+    margin-bottom: 1.5rem !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+  }
+  
+  @media (min-width: 768px) {
+    h1.text-5xl {
+      font-size: 4.5rem !important;
+    }
+  }
+  
+  /* Gradient Text */
+  h1 span.bg-gradient-to-r {
+    background: linear-gradient(to right, #0f172a, #475569) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    display: block !important;
+  }
+  
+  /* Subtitle */
+  p.text-xl.text-slate-600 {
+    font-size: 1.25rem !important;
+    color: #64748b !important;
+    margin-bottom: 3rem !important;
+    max-width: 42rem !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    line-height: 1.75 !important;
+    text-align: center !important;
+  }
+  
+  /* BUTTON CONTAINER - NUR FÜR LANDING PAGE HERO SECTION */
+  .landing-page section.pt-20 .flex.flex-col.sm\\:flex-row.gap-4,
+  .landing-page section.pt-20 .flex.flex-col.sm\\:flex-row,
+  .landing-page section .flex.flex-col,
+  .landing-page .text-center + .flex.flex-col,
+  .landing-page p.text-xl + .flex {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 1rem !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-wrap: nowrap !important;
+  }
+  
+  /* Navigation explizit zurücksetzen - NUR Landing Page */
+  .landing-page nav .flex.justify-between {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    height: 4rem !important;
+    gap: normal !important;
+  }
+  
+  .landing-page nav .flex.items-center {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.75rem !important;
+  }
+  
+  /* Primary Button */
+  button.bg-slate-900 {
+    background-color: #0f172a !important;
+    color: white !important;
+    padding: 1rem 2rem !important;
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    border-radius: 9999px !important;
+    transition: all 0.2s ease-in-out !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+  }
+  
+  button.bg-slate-900:hover {
+    background-color: #1e293b !important;
+  }
+  
+  /* Secondary Button */
+  button[variant="outline"] {
+    border: 2px solid #e2e8f0 !important;
+    color: #374151 !important;
+    background-color: transparent !important;
+    padding: 1rem 2rem !important;
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    border-radius: 9999px !important;
+    transition: all 0.2s ease-in-out !important;
+  }
+  
+  button[variant="outline"]:hover {
+    background-color: #f8fafc !important;
+  }
+  
+  /* Mockup Container */
+  .relative.max-w-4xl {
+    position: relative !important;
+    max-width: 56rem !important;
+    margin: 0 auto !important;
+  }
+  
+  /* Mockup Outer */
+  .bg-gradient-to-br.from-slate-50.to-slate-100 {
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9) !important;
+    border-radius: 1.5rem !important;
+    padding: 2rem !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  
+  /* Mockup Inner */
+  .bg-white.rounded-2xl.p-6 {
+    background-color: white !important;
+    border-radius: 1rem !important;
+    padding: 1.5rem !important;
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1) !important;
+  }
+  
+  /* Browser Dots */
+  .w-3.h-3.bg-red-500 {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    background-color: #ef4444 !important;
+    border-radius: 50% !important;
+  }
+  
+  .w-3.h-3.bg-yellow-500 {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    background-color: #eab308 !important;
+    border-radius: 50% !important;
+  }
+  
+  .w-3.h-3.bg-green-500 {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    background-color: #22c55e !important;
+    border-radius: 50% !important;
+  }
+  
+  /* Address Bar */
+  .ml-4.bg-slate-100 {
+    margin-left: 1rem !important;
+    background-color: #f1f5f9 !important;
+    padding: 0.5rem 1rem !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.875rem !important;
+    color: #64748b !important;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+  }
+  
+  /* Stats Cards */
+  .bg-slate-50.p-4.rounded-xl {
+    background-color: #f8fafc !important;
+    padding: 1rem !important;
+    border-radius: 0.75rem !important;
+  }
+  
+  /* Badge in Mockup */
+  .absolute.-top-6.-right-6 {
+    position: absolute !important;
+    top: -1.5rem !important;
+    right: -1.5rem !important;
+    background-color: white !important;
+    padding: 1rem !important;
+    border-radius: 1rem !important;
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  
+  /* Star Icon */
+  .h-5.w-5.text-yellow-500.fill-yellow-500 {
+    height: 1.25rem !important;
+    width: 1.25rem !important;
+    color: #eab308 !important;
+    fill: #eab308 !important;
+  }
+  
+  /* FEATURE CARDS ICON FIX - WEIßE ICONS */
+  /* Feature Card Icon Container */
+  .bg-slate-900.w-14.h-14 {
+    background-color: #0f172a !important;
+    width: 3.5rem !important;
+    height: 3.5rem !important;
+    border-radius: 1rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin: 0 auto !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  /* Feature Card Icons - WEISS */
+  .bg-slate-900.w-14.h-14 svg {
+    height: 1.75rem !important;
+    width: 1.75rem !important;
+    color: white !important;
+    stroke: white !important;
+    fill: none !important;
+    stroke-width: 2 !important;
+  }
+  
+  /* Alternative Selektoren für Feature Icons */
+  div[class*="bg-slate-900"] svg {
+    color: white !important;
+    stroke: white !important;
+    fill: none !important;
+  }
+  
+  /* Spezifische Icon-Klassen */
+  .h-7.w-7.text-white {
+    height: 1.75rem !important;
+    width: 1.75rem !important;
+    color: white !important;
+    stroke: white !important;
+    fill: none !important;
+    stroke-width: 2 !important;
+  }
+  
+  /* ANMELDEN BUTTON VERKLEINERUNG - NUR LANDING PAGE */
+  .landing-page nav button {
+    background-color: #0f172a !important;
+    color: white !important;
+    padding: 0.5rem 1.5rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    border-radius: 9999px !important;
+    transition: all 0.2s ease-in-out !important;
+    border: none !important;
+  }
+  
+  .landing-page nav button:hover {
+    background-color: #1e293b !important;
+  }
 }

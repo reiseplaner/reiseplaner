@@ -19,7 +19,7 @@ export default function UsernameSetup({ onComplete }: UsernameSetupProps) {
   const [debouncedUsername, setDebouncedUsername] = useState("");
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const { skipUsernameSetup } = useAuth();
+  const { skipUsernameSetup, forceSignOut } = useAuth();
   const queryClient = useQueryClient();
 
   // Debounce username input

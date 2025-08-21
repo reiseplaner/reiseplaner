@@ -1748,6 +1748,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ADMIN ROUTE: Delete all data (DANGER ZONE!)
+  app.delete('/api/admin/delete-all-data', async (req, res) => {
+    try {
+      const { confirmationKey } = req.body;
+      
+      // Super simple confirmation key - in production use proper auth
+      if (confirmationKey !== 'DELETE_ALL_DATA_CONFIRMED_2024') {
+        return res.status(403).json({ 
+          message: 'Confirmation key required. Add {"confirmationKey": "DELETE_ALL_DATA_CONFIRMED_2024"} to request body.' 
+        });
+      }
+
+      console.log('🚨 ADMIN: Starting complete data deletion...');
+      
+      // Delete all data in correct order (due to foreign key constraints)
+      console.log('🗑️ Deleting cost sharing receipts...');
+      await db.delete(costSharingReceipts);
+      
+      console.log('🗑️ Deleting trip upvotes...');
+      await db.delete(tripUpvotes);
+      
+      console.log('🗑️ Deleting trip comments...');
+      await db.delete(tripComments);
+      
+      console.log('🗑️ Deleting budget items...');
+      await db.delete(budgetItems);
+      
+      console.log('🗑️ Deleting activities...');
+      await db.delete(activities);
+      
+      console.log('🗑️ Deleting restaurants...');
+      await db.delete(restaurants);
+      
+      console.log('🗑️ Deleting trips...');
+      await db.delete(trips);
+      
+      console.log('🗑️ Deleting users...');
+      await db.delete(users);
+
+      // Reset auto-increment sequences
+      console.log('🔄 Resetting sequences...');
+      await db.execute(sql`ALTER SEQUENCE trips_id_seq RESTART WITH 1`);
+      await db.execute(sql`ALTER SEQUENCE budget_items_id_seq RESTART WITH 1`);
+      await db.execute(sql`ALTER SEQUENCE activities_id_seq RESTART WITH 1`);
+      await db.execute(sql`ALTER SEQUENCE restaurants_id_seq RESTART WITH 1`);
+
+      console.log('✅ ADMIN: All data deleted successfully!');
+      
+      res.json({ 
+        success: true,
+        message: 'All users and trips deleted successfully',
+        timestamp: new Date().toISOString(),
+        tablesCleared: [
+          'cost_sharing_receipts',
+          'trip_upvotes', 
+          'trip_comments',
+          'budget_items',
+          'activities', 
+          'restaurants',
+          'trips',
+          'users'
+        ]
+      });
+      
+    } catch (error) {
+      console.error('🔴 ADMIN: Error deleting all data:', error);
+      res.status(500).json({ 
+        message: 'Failed to delete all data',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
