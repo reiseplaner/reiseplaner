@@ -383,7 +383,8 @@ export default function Profile() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-4xl mx-auto p-6">
+      <main className="flex justify-center px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full max-w-5xl">
         <div className="mb-8">
           <div className="flex items-center gap-4 mb-4">
             <Button
@@ -855,7 +856,8 @@ export default function Profile() {
             </Card>
           </TabsContent>
         </Tabs>
-      </div>
+        </div>
+      </main>
     </div>
   );
 } 

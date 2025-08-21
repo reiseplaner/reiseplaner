@@ -585,7 +585,7 @@ export default function Community() {
     return (
       <div className="min-h-screen bg-slate-50">
         <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="animate-pulse">
             <div className="h-8 bg-slate-200 rounded w-1/3 mb-2"></div>
             <div className="h-4 bg-slate-200 rounded w-1/2 mb-8"></div>
@@ -610,8 +610,8 @@ export default function Community() {
     <div className="min-h-screen bg-slate-50">
       <Navigation />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Community-Reisepläne</h1>
           <p className="text-slate-600">Entdecke Inspiration von anderen Reisenden und teile deine eigenen Pläne</p>
         </div>

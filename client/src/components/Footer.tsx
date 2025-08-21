@@ -3,7 +3,8 @@ import { Link } from "wouter";
 export default function Footer() {
   return (
     <footer className="bg-white border-t border-gray-200 py-8 mt-auto">
-      <div className="container mx-auto px-4">
+      <div className="flex justify-center">
+        <div className="w-full max-w-5xl px-4">
         <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           {/* Logo/Brand */}
           <div className="flex items-center space-x-2">
@@ -40,6 +41,7 @@ export default function Footer() {
             Planen Sie Ihre Traumreise mit unserer innovativen Reiseplanungsplattform. 
             Entdecken Sie neue Orte, organisieren Sie Aktivitäten und teilen Sie Ihre Erlebnisse.
           </p>
+        </div>
         </div>
       </div>
     </footer>

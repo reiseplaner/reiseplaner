@@ -153,26 +153,26 @@ export default function PricingPage() {
     switch (planId) {
       case 'free':
         return (
-          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
-            <Plane className="h-7 w-7 text-white" />
+          <div className="bg-slate-100 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Plane className="h-7 w-7 text-slate-900" />
           </div>
         );
       case 'pro':
         return (
-          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
-            <Sparkles className="h-7 w-7 text-white" />
+          <div className="bg-slate-100 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Sparkles className="h-7 w-7 text-slate-900" />
           </div>
         );
       case 'veteran':
         return (
-          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
-            <Crown className="h-7 w-7 text-white" />
+          <div className="bg-slate-100 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Crown className="h-7 w-7 text-slate-900" />
           </div>
         );
       default:
         return (
-          <div className="bg-slate-900 w-14 h-14 rounded-2xl flex items-center justify-center">
-            <Plane className="h-7 w-7 text-white" />
+          <div className="bg-slate-100 w-14 h-14 rounded-2xl flex items-center justify-center">
+            <Plane className="h-7 w-7 text-slate-900" />
           </div>
         );
     }
@@ -212,10 +212,10 @@ export default function PricingPage() {
     return (
       <div className="min-h-screen bg-white">
         <Navigation />
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-          <div className="text-center">
-            <div className="bg-slate-900 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <Plane className="h-8 w-8 text-white" />
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center px-4">
+            <div className="bg-slate-100 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <Plane className="h-8 w-8 text-slate-900" />
             </div>
             <p className="text-lg text-slate-600">Lade Pricing-Optionen...</p>
           </div>
@@ -230,7 +230,8 @@ export default function PricingPage() {
       
       {/* Hero Section */}
       <section className="pt-20 pb-16 bg-slate-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-center px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-7xl">
           {/* Back Button */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -248,25 +249,28 @@ export default function PricingPage() {
           </motion.div>
 
           {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-16"
-          >
+          <div className="flex justify-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center mb-16 w-full max-w-4xl"
+            >
             <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
               <Sparkles className="h-4 w-4" />
               Premium Reiseplanung für Profis
             </div>
             <h1 className="text-5xl md:text-6xl font-bold text-slate-900 mb-6 leading-tight">
               Wählen Sie
-              <span className="bg-gradient-to-r from-slate-900 to-slate-600 bg-clip-text text-transparent block">
+              <span className="text-slate-900 block">
                 Ihren Plan
               </span>
             </h1>
-            <p className="text-xl text-slate-600 mb-12 max-w-3xl mx-auto leading-relaxed">
-              Planen Sie mehr Reisen und nutzen Sie erweiterte Features für Ihre Traumurlaube. 
-              Professionelle Tools für jeden Reisetyp.
-            </p>
+            <div className="flex justify-center mb-12">
+              <p className="text-xl text-slate-600 max-w-3xl leading-relaxed text-center">
+                Planen Sie mehr Reisen und nutzen Sie erweiterte Features für Ihre Traumurlaube. 
+                Professionelle Tools für jeden Reisetyp.
+              </p>
+            </div>
             
             {currentSubscription && (
               <div className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200 max-w-md mx-auto">
@@ -282,42 +286,45 @@ export default function PricingPage() {
                 </p>
               </div>
             )}
-          </motion.div>
-        </div>
-      </section>
+            </motion.div>
+          </div>
+                  </div>
+          </div>
+        </section>
 
       {/* Pricing Cards Section */}
       <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-center px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-7xl">
           {/* Billing Toggle */}
-          <div className="flex items-center justify-center gap-4 mb-12">
-            <span className={`text-lg font-medium ${billingInterval === 'monthly' ? 'text-slate-900' : 'text-slate-500'}`}>
+          <div className="flex items-center justify-center gap-6 mb-12">
+            <span className={`text-lg font-medium transition-colors ${billingInterval === 'monthly' ? 'text-slate-900' : 'text-slate-500'}`}>
               Monatlich
             </span>
             <button
               onClick={() => setBillingInterval(billingInterval === 'monthly' ? 'yearly' : 'monthly')}
-              className={`relative inline-flex h-8 w-16 items-center rounded-full transition-colors ${
+              className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 ${
                 billingInterval === 'yearly' ? 'bg-slate-900' : 'bg-slate-300'
               }`}
             >
               <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                  billingInterval === 'yearly' ? 'translate-x-9' : 'translate-x-1'
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-200 shadow-md ml-0.5 ${
+                  billingInterval === 'monthly' ? 'translate-x-0' : 'translate-x-6'
                 }`}
               />
             </button>
-            <span className={`text-lg font-medium ${billingInterval === 'yearly' ? 'text-slate-900' : 'text-slate-500'}`}>
+            <span className={`text-lg font-medium transition-colors ${billingInterval === 'yearly' ? 'text-slate-900' : 'text-slate-500'}`}>
               Jährlich
             </span>
             {billingInterval === 'yearly' && (
-              <Badge className="bg-green-100 text-green-800 border-green-200">
+              <Badge className="bg-green-100 text-green-800 border-green-200 ml-2">
                 <Star className="h-3 w-3 mr-1" />
                 2 Monate Gratis!
               </Badge>
             )}
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
           {Object.values(plans).map((plan, index) => (
             <motion.div
               key={plan.id}
@@ -325,14 +332,9 @@ export default function PricingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
             >
-              <Card className={`relative h-full flex flex-col ${getPlanColor(plan.id)} ${
+              <Card className={`h-full flex flex-col ${getPlanColor(plan.id)} ${
                 currentSubscription?.status === plan.id ? 'ring-2 ring-green-500' : ''
               }`}>
-                {plan.id === 'pro' && (
-                  <Badge className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white">
-                    Beliebt
-                  </Badge>
-                )}
                 
                 <CardHeader className="text-center pb-8">
                   <div className="mx-auto mb-4">
@@ -389,7 +391,8 @@ export default function PricingPage() {
                       </div>
                     ) : (
                       <Button
-                        className="w-full bg-slate-900 text-white hover:bg-slate-800 rounded-full py-3 font-semibold transition-all duration-200"
+                        className="w-full bg-slate-900 hover:bg-slate-800 rounded-full py-3 font-semibold transition-all duration-200"
+                        style={{ color: 'white' }}
                         onClick={() => handleUpgrade(plan.id, billingInterval)}
                         disabled={upgrading === plan.id}
                       >
@@ -406,12 +409,14 @@ export default function PricingPage() {
             </motion.div>
           ))}
           </div>
+          </div>
         </div>
-      </section>
+        </section>
 
       {/* FAQ Section */}
       <section className="py-20 bg-slate-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-center px-4 sm:px-6 lg:px-8">
+          <div className="w-full max-w-7xl">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -421,10 +426,11 @@ export default function PricingPage() {
             <h2 className="text-4xl font-bold text-slate-900 mb-4">
               Häufig gestellte Fragen
             </h2>
-            <p className="text-xl text-slate-600 mb-16 max-w-2xl mx-auto">
+            <p className="text-xl text-slate-600 mb-16 max-w-2xl mx-auto text-center">
               Alles was Sie über unsere Pläne wissen müssen
             </p>
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
+            <div className="flex justify-center">
+              <div className="grid md:grid-cols-2 gap-8 max-w-5xl w-full text-left">
               <Card className="border-0 shadow-lg bg-white p-6">
                 <h3 className="font-semibold text-slate-900 mb-3">Kann ich jederzeit kündigen?</h3>
                 <p className="text-slate-600">Ja, alle Pläne sind jederzeit kündbar. Keine langfristigen Verpflichtungen.</p>
@@ -441,10 +447,12 @@ export default function PricingPage() {
                 <h3 className="font-semibold text-slate-900 mb-3">Was passiert mit meinen Daten bei der Kündigung?</h3>
                 <p className="text-slate-600">Ihre Reisedaten bleiben erhalten, aber Premium-Features werden deaktiviert.</p>
               </Card>
+              </div>
             </div>
           </motion.div>
-        </div>
-      </section>
+                  </div>
+          </div>
+        </section>
     </div>
   );
 } 

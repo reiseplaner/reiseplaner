@@ -177,7 +177,7 @@ export default function ProfileDropdown() {
         </Button>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent className="w-64" align="end" forceMount>
+      <DropdownMenuContent className="w-64 bg-white border border-slate-200 shadow-lg backdrop-blur-md bg-white/95" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
