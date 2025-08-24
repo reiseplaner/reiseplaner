@@ -15,7 +15,8 @@ console.log('🔧 Supabase config:', {
   url: supabaseUrl,
   anonKeyLength: supabaseAnonKey?.length || 0,
   hasUrl: !!supabaseUrl,
-  hasKey: !!supabaseAnonKey
+  hasKey: !!supabaseAnonKey,
+  timestamp: new Date().toISOString()
 });
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
