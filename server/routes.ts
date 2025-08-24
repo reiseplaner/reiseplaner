@@ -326,6 +326,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set username
   app.post('/api/auth/username', supabaseAuth, async (req: any, res) => {
     try {
+      console.log(`🔧 Username endpoint called with body:`, req.body);
+      console.log(`🔧 User from auth:`, req.user);
+      
       const userId = req.user.id;
       const { username } = req.body;
       
