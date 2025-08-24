@@ -18,7 +18,8 @@ console.log('🔧 Supabase config:', {
   hasKey: !!supabaseAnonKey,
   envUrl: process.env.SUPABASE_URL,
   envKeyLength: process.env.SUPABASE_ANON_KEY?.length || 0,
-  timestamp: new Date().toISOString()
+  timestamp: new Date().toISOString(),
+  debug: true
 });
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
