@@ -16,19 +16,28 @@ console.log('🔧 Supabase config:', {
   anonKeyLength: supabaseAnonKey?.length || 0,
   hasUrl: !!supabaseUrl,
   hasKey: !!supabaseAnonKey,
-  timestamp: new Date().toISOString()
+  envUrl: process.env.SUPABASE_URL,
+  envKeyLength: process.env.SUPABASE_ANON_KEY?.length || 0,
+  timestamp: new Date().toISOString(),
+  debug: true
 });
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export const supabaseAuth: RequestHandler = async (req, res, next) => {
   try {
+    console.log('🔧 SupabaseAuth middleware called');
+    console.log('🔧 Headers:', req.headers.authorization ? 'Authorization header present' : 'No authorization header');
+    
     const authHeader = req.headers.authorization
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('🔴 No valid authorization header');
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
     const token = authHeader.substring(7)
+    console.log('🔧 Token length:', token.length);
+    
     const { data: { user }, error } = await supabase.auth.getUser(token)
     
     if (error) {
@@ -60,6 +69,9 @@ export const supabaseAuth: RequestHandler = async (req, res, next) => {
     next()
   } catch (error) {
     console.error('Supabase auth error:', error)
+    return res.status(401).json({ message: 'Unauthorized' })
+  }
+}
     return res.status(401).json({ message: 'Unauthorized' })
   }
 }
