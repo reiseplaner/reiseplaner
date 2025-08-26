@@ -61,9 +61,9 @@ export function useAuth() {
   useEffect(() => {
     if (user && !dbUser && isLoadingDbUser && !dbUserError) {
       const timeout = setTimeout(() => {
-        console.warn('Database user loading timed out after 8 seconds');
+        console.warn('Database user loading timed out after 3 seconds - assuming new user needs username');
         setDbUserLoadingTimeout(true);
-      }, 8000); // 8 seconds timeout
+      }, 3000); // 3 seconds timeout for faster UX
 
       return () => clearTimeout(timeout);
     } else {
@@ -177,18 +177,34 @@ export function useAuth() {
     !usernameSetupSkipped && 
     (
       (dbUser && !dbUser.username) || // Existing user without username
-      (!dbUser && !isLoadingDbUser && (dbUserError || dbUserLoadingTimeout)) // Failed to load, likely new user
+      (!dbUser && !isLoadingDbUser && dbUserLoadingTimeout && !dbUserError) // Timeout only, no error
     );
 
   // Only show loading for initial auth check
   const isAuthLoading = isLoading;
-  // Show loading for database user only if actively loading and not timed out
+  // Show loading for database user only if actively loading, not timed out, and not errored
   const isDbUserLoading = user && isLoadingDbUser && !dbUserError && !dbUserLoadingTimeout;
+  
+  // Combined loading state - only show loading if we're actually loading something important
+  const finalIsLoading = isAuthLoading || (isDbUserLoading && !needsUsername);
+
+  // Debug logging
+  console.log('🔍 useAuth state:', {
+    user: !!user,
+    dbUser: !!dbUser,
+    isAuthLoading,
+    isDbUserLoading,
+    finalIsLoading,
+    needsUsername,
+    usernameSetupSkipped,
+    dbUserError: !!dbUserError,
+    dbUserLoadingTimeout
+  });
 
   return {
     user,
     dbUser,
-    isLoading: isAuthLoading || isDbUserLoading,
+    isLoading: finalIsLoading,
     isAuthenticated: !!user,
     needsUsername,
     skipUsernameSetup,
