@@ -102,14 +102,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', supabaseAuth, async (req: any, res) => {
     try {
       const supabaseUser = req.user;
+      console.log(`🔍 GET /api/auth/user called for user: ${supabaseUser.id}`);
       
-      // First, check if user already exists in our database
+      // Get user from database (should exist due to supabaseAuth middleware)
       let dbUser = await storage.getUser(supabaseUser.id);
       
       if (!dbUser) {
-        // User doesn't exist, create new user with Supabase metadata
-        console.log(`🔧 Creating new user ${supabaseUser.id} in database`);
-        console.log(`🔧 Using Supabase avatar: ${supabaseUser.user_metadata?.avatar_url || 'none'}`);
+        // User should exist after middleware, but create if missing
+        console.log(`🔧 User not found in database, creating: ${supabaseUser.id}`);
         dbUser = await storage.upsertUser({
           id: supabaseUser.id,
           email: supabaseUser.email,
@@ -117,32 +117,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           lastName: supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
           profileImageUrl: supabaseUser.user_metadata?.avatar_url || null,
         });
-      } else {
-        // User exists, only update basic info but preserve profileImageUrl
-        console.log(`🔧 Updating existing user ${supabaseUser.id} (preserving profileImageUrl)`);
-        console.log(`🔧 Preserving existing profileImageUrl: ${dbUser.profileImageUrl || 'none'}`);
-        dbUser = await storage.upsertUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email,
-          firstName: supabaseUser.user_metadata?.full_name?.split(' ')[0] || dbUser.firstName,
-          lastName: supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || dbUser.lastName,
-          profileImageUrl: dbUser.profileImageUrl, // Preserve existing profileImageUrl
-        });
       }
       
-      console.log(`🔍 Auth /user response for ${supabaseUser.id}:`, {
-        id: dbUser.id,
-        email: dbUser.email,
-        profileImageUrl: dbUser.profileImageUrl,
-        firstName: dbUser.firstName,
-        lastName: dbUser.lastName
+      console.log(`🔍 Returning user data:`, { 
+        id: dbUser.id, 
+        email: dbUser.email, 
+        username: dbUser.username,
+        hasUsername: !!dbUser.username 
       });
       
-      // Return the database user info, not the Supabase user
+      // Return the database user info
       res.json(dbUser);
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      console.error("🔴 Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user", error: error instanceof Error ? error.message : String(error) });
     }
   });
 
@@ -326,6 +314,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set username
   app.post('/api/auth/username', supabaseAuth, async (req: any, res) => {
     try {
+      console.log(`🔧 Username endpoint called with body:`, req.body);
+      console.log(`🔧 User from auth:`, req.user);
+      
       const userId = req.user.id;
       const { username } = req.body;
       
