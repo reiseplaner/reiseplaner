@@ -186,10 +186,11 @@ export default function Landing() {
     const formData = new FormData(e.currentTarget);
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
+    const username = formData.get('username') as string;
 
     try {
       setIsLoading(true);
-      await signUpWithEmail(email, password);
+      await signUpWithEmail(email, password, username);
       toast({
         title: "Registrierung erfolgreich!",
         description: "Bitte prüfe deine E-Mails für die Bestätigung.",
@@ -712,6 +713,22 @@ export default function Landing() {
                 
                 <TabsContent value="signup" className="space-y-4">
                   <form onSubmit={handleEmailSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-username" className="text-slate-700 font-medium">Username</Label>
+                      <Input
+                        id="signup-username"
+                        name="username"
+                        type="text"
+                        placeholder="meinusername"
+                        required
+                        disabled={isLoading}
+                        minLength={3}
+                        pattern="^[a-zA-Z0-9_-]+$"
+                        title="Username darf nur Buchstaben, Zahlen, _ und - enthalten (mindestens 3 Zeichen)"
+                        className="border-slate-200 focus:border-slate-400 rounded-lg"
+                      />
+                      <p className="text-xs text-slate-500">Mindestens 3 Zeichen, nur Buchstaben, Zahlen, _ und -</p>
+                    </div>
                     <div className="space-y-2">
                       <Label htmlFor="signup-email" className="text-slate-700 font-medium">E-Mail</Label>
                       <Input

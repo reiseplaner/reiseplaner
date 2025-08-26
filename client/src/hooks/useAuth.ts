@@ -120,11 +120,36 @@ export function useAuth() {
     return data;
   };
 
-  const signUpWithEmail = async (email: string, password: string) => {
-    console.log('Attempting to sign up with email:', email);
+  const signUpWithEmail = async (email: string, password: string, username?: string) => {
+    console.log('Attempting to sign up with email:', email, 'username:', username);
+    
+    // If username is provided, check availability first
+    if (username) {
+      try {
+        const response = await fetch(`/api/auth/username/${username}/available`);
+        if (response.ok) {
+          const data = await response.json();
+          if (!data.available) {
+            throw new Error('Username ist bereits vergeben. Bitte wähle einen anderen.');
+          }
+        }
+      } catch (error: any) {
+        console.error('Username availability check failed:', error);
+        if (error.message.includes('vergeben')) {
+          throw error;
+        }
+        // Continue if check fails (assume available)
+      }
+    }
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        data: {
+          username: username || null
+        }
+      }
     });
     console.log('Sign up response:', { data, error });
     if (error) {
@@ -169,16 +194,11 @@ export function useAuth() {
     setUsernameSetupSkipped(true);
   };
 
-  // Check if user needs to set username
-  // Show username setup if user is authenticated and either:
-  // 1. dbUser is loaded and has no username, OR
-  // 2. dbUser failed to load or timed out (assume new user needs username)
+  // Username setup is no longer needed since we require it during registration
+  // Only show for existing users who registered before this change
   const needsUsername = user && 
     !usernameSetupSkipped && 
-    (
-      (dbUser && !dbUser.username) || // Existing user without username
-      (!dbUser && !isLoadingDbUser && dbUserLoadingTimeout && !dbUserError) // Timeout only, no error
-    );
+    dbUser && !dbUser.username; // Only existing users without username
 
   // Only show loading for initial auth check
   const isAuthLoading = isLoading;
