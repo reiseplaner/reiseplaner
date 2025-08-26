@@ -49,6 +49,10 @@ function Router() {
           setUsernameSetupCompleted(true);
           // Force a re-render by invalidating the auth query
           queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
+          // Add a small delay to ensure state updates
+          setTimeout(() => {
+            console.log('🔍 Username setup completion finalized');
+          }, 100);
         }} 
       />
     );
