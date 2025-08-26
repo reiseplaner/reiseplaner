@@ -116,6 +116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: supabaseUser.user_metadata?.full_name?.split(' ')[0] || null,
           lastName: supabaseUser.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
           profileImageUrl: supabaseUser.user_metadata?.avatar_url || null,
+          username: supabaseUser.user_metadata?.username || null,
         });
       }
       

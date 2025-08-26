@@ -62,6 +62,7 @@ export const supabaseAuth: RequestHandler = async (req, res, next) => {
         firstName: user.user_metadata?.full_name?.split(' ')[0] || null,
         lastName: user.user_metadata?.full_name?.split(' ').slice(1).join(' ') || null,
         profileImageUrl: user.user_metadata?.avatar_url || null,
+        username: user.user_metadata?.username || null, // Get username from signup
       });
       console.log(`🔧 SupabaseAuth: User ensured in database:`, { id: dbUser.id, email: dbUser.email, username: dbUser.username });
     } catch (dbError) {
