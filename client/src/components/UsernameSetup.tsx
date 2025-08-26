@@ -72,6 +72,12 @@ export default function UsernameSetup({ onComplete }: UsernameSetupProps) {
         const response = await apiRequest("POST", "/api/auth/username", { username });
         console.log(`🔧 Set username response status: ${response.status}`);
         
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`🔴 Username API error:`, errorText);
+          throw new Error(`Fehler beim Setzen des Usernames: ${errorText}`);
+        }
+        
         const data = await response.json();
         console.log(`🔧 Set username response data:`, data);
         return data;
@@ -90,16 +96,17 @@ export default function UsernameSetup({ onComplete }: UsernameSetupProps) {
       // Invalidate user query to refetch updated user data
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       
-      // Small delay to ensure query invalidation completes
+      // Small delay to ensure query invalidation completes and then complete
       setTimeout(() => {
+        console.log('🔧 Username setup completing...');
         onComplete();
-      }, 100);
+      }, 500);
     },
     onError: (error: any) => {
       console.error(`🔴 Username setting error:`, error);
       toast({
-        title: "Fehler",
-        description: error.message || "Username konnte nicht gesetzt werden.",
+        title: "Fehler beim Username setzen",
+        description: error.message || "Username konnte nicht gesetzt werden. Bitte versuche es erneut.",
         variant: "destructive",
       });
     },
