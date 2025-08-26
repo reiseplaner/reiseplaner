@@ -22,8 +22,8 @@ export default function Navigation() {
     userDetails: user ? { id: user.id, email: user.email } : null
   });
 
-  // Show a loading placeholder when user is authenticated but dbUser is not yet loaded
-  const showLoadingProfile = user && !dbUser && !isLoading;
+  // Show loading when user is authenticated but dbUser is still loading (not timed out)
+  const showLoadingProfile = user && !dbUser && isLoading;
 
   const handleRefreshProfile = () => {
     console.log('🔄 Refreshing user profile data');
