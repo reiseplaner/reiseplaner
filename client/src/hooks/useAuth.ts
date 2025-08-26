@@ -27,7 +27,6 @@ export function useAuth() {
       try {
         const response = await apiRequest("GET", "/api/auth/user");
         console.log('🔍 useAuth: API response status:', response.status);
-        console.log('🔍 useAuth: API response headers:', response.headers);
         
         if (!response.ok) {
           console.error('🔴 useAuth: API response not ok:', response.status, response.statusText);
@@ -41,30 +40,35 @@ export function useAuth() {
         return userData;
       } catch (error) {
         console.error('🔴 useAuth: Failed to fetch database user:', error);
-        // Return null instead of throwing to prevent endless loading
-        return null;
+        throw error; // Throw error to trigger retry logic
       }
     },
     enabled: !!user,
     retry: (failureCount, error) => {
       console.log(`🔄 useAuth: Retry attempt ${failureCount}, error:`, error);
-      return failureCount < 3; // Retry up to 3 times
+      return failureCount < 2; // Retry up to 2 times
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    // Add timeout to prevent endless loading
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
+    // Add query timeout
+    meta: {
+      errorMessage: 'Benutzer konnte nicht geladen werden'
+    }
   });
 
   // Timeout for database user loading
   useEffect(() => {
     if (user && !dbUser && isLoadingDbUser && !dbUserError) {
       const timeout = setTimeout(() => {
-        console.warn('Database user loading timed out after 10 seconds');
+        console.warn('Database user loading timed out after 8 seconds');
         setDbUserLoadingTimeout(true);
-      }, 10000); // 10 seconds timeout
+      }, 8000); // 8 seconds timeout
 
       return () => clearTimeout(timeout);
+    } else {
+      // Reset timeout if conditions change
+      setDbUserLoadingTimeout(false);
     }
   }, [user, dbUser, isLoadingDbUser, dbUserError]);
 
@@ -166,12 +170,19 @@ export function useAuth() {
   };
 
   // Check if user needs to set username
-  // Only show username setup if user is authenticated, has no username, and hasn't skipped setup
-  const needsUsername = user && (!dbUser || (dbUser && !dbUser.username)) && !usernameSetupSkipped;
+  // Show username setup if user is authenticated and either:
+  // 1. dbUser is loaded and has no username, OR
+  // 2. dbUser failed to load or timed out (assume new user needs username)
+  const needsUsername = user && 
+    !usernameSetupSkipped && 
+    (
+      (dbUser && !dbUser.username) || // Existing user without username
+      (!dbUser && !isLoadingDbUser && (dbUserError || dbUserLoadingTimeout)) // Failed to load, likely new user
+    );
 
-  // Only show loading for initial auth check, not for database user fetch
+  // Only show loading for initial auth check
   const isAuthLoading = isLoading;
-  // Don't show loading for database user if there's an error, timeout, or if it's taking too long
+  // Show loading for database user only if actively loading and not timed out
   const isDbUserLoading = user && isLoadingDbUser && !dbUserError && !dbUserLoadingTimeout;
 
   return {
