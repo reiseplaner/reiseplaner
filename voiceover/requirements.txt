@@ -1,0 +1,13 @@
+# Multilingual Voiceover Pipeline – Python Dependencies
+#
+# Install with:
+#   pip install -r voiceover/requirements.txt
+#
+# ffmpeg must also be installed on the system:
+#   Ubuntu/Debian: sudo apt install ffmpeg
+#   macOS:         brew install ffmpeg
+#   Windows:       https://ffmpeg.org/download.html
+
+openai>=1.30.0          # Whisper transcription + TTS generation
+anthropic>=0.28.0       # Claude translation
+pydub>=0.25.1           # Audio segment manipulation
